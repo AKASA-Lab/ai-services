@@ -1,0 +1,8 @@
+model:
+  name: mobilenet_v2
+  pretrained: true
+  num_classes: 4
+training:
+  batch_size: 16
+  max_epochs: 15
+  optimizer: AdamW

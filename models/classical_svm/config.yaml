@@ -1,0 +1,7 @@
+model:
+  name: classical_color_texture_svm
+  classifier: SVC
+  kernel: rbf
+  class_weight: balanced
+training:
+  feature_groups: [rgb, hsv, lab, glcm, lbp]

@@ -1,0 +1,57 @@
+# Datasets and generated image files
+data/raw/
+data/processed/images/
+data/processed/augmented/
+data/derived/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.tif
+*.tiff
+*.bmp
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Model artifacts and experiment outputs
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.joblib
+*.pkl
+checkpoints/
+outputs/
+runs/
+wandb/
+mlruns/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Notebooks and local environments
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# OS/editor temporary files
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.swp
+*.swo

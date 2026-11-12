@@ -1,0 +1,8 @@
+model:
+  name: yolov8n-cls
+  pretrained: true
+  num_classes: 4
+training:
+  batch_size: 16
+  max_epochs: 15
+  image_size: 224

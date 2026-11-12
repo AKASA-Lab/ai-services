@@ -62,6 +62,18 @@ It is not an eight-combination NPK experiment and it is not a multi-label task. 
 - Create a metadata manifest with at least `image_id`, `image_path`, and `label`.
 - Record missing plant IDs or acquisition metadata as unavailable; do not invent them.
 
+The shared audit, manifest, and split tools are documented in [CONTRIBUTING.md](./CONTRIBUTING.md). For example:
+
+```bash
+python -m pip install -r requirements.txt
+python -m lettuce_benchmark.cli.audit_dataset data/raw --output-dir outputs/audit
+python -m lettuce_benchmark.cli.build_manifest data/raw --output data/processed/metadata.csv
+python -m lettuce_benchmark.cli.generate_splits data/processed/metadata.csv --output-dir data/splits
+python -m lettuce_benchmark.cli.validate_splits data/splits
+```
+
+These commands have not been run against the Kaggle archive in this repository. Reported counts below are literature/context figures only, not a verified local audit.
+
 ---
 
 ## 3. Team division

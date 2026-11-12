@@ -1,0 +1,20 @@
+dataset:
+  metadata_csv: data/processed/metadata.csv
+  image_root: data/raw
+  class_names: ["FN", "-N", "-P", "-K"]
+  group_column: null
+
+splits:
+  seeds: [42, 123, 2026]
+  n_splits: 4
+  validation_fraction: 0.2
+
+evaluation:
+  primary_metric: macro_f1
+  prediction_columns:
+    - image_id
+    - seed
+    - fold
+    - true_label
+    - predicted_label
+    - confidence

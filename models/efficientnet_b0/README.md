@@ -1,0 +1,3 @@
+# EfficientNet-B0 — Person 2
+
+Implement the EfficientNet-B0 training and prediction-export workflow in this directory. Consume the shared metadata and split CSVs; do not regenerate splits. Use the validation partition for model selection and export test predictions using the common schema in `PROJECT_GUIDELINES.md`. Save configuration, run metadata, and efficiency measurements with generated outputs outside source control.
