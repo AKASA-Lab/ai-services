@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from ..config import configure_logging
-from ..dataset import audit_dataset, class_distribution, create_metadata
+from ..dataset import audit_dataset, class_distribution, create_metadata, drop_exact_duplicates
 
 
 def main() -> None:
@@ -18,9 +20,25 @@ def main() -> None:
         type=Path,
         help="Optional CSV keyed by image_id or image_path with plant_id/source_group columns",
     )
+    parser.add_argument(
+        "--drop-exact-duplicates",
+        action="store_true",
+        help=(
+            "Exclude redundant byte-identical copies (same SHA-256 and same label), keeping the "
+            "first copy. Excluded rows are written next to the manifest for review."
+        ),
+    )
     args = parser.parse_args()
     configure_logging()
     audit = audit_dataset(args.image_root)
+    if args.drop_exact_duplicates:
+        audit, excluded = drop_exact_duplicates(audit)
+        excluded_path = args.output.parent / "excluded_exact_duplicates.csv"
+        excluded_path.parent.mkdir(parents=True, exist_ok=True)
+        excluded[["image_id", "image_path", "label", "sha256", "exact_duplicate_of"]].to_csv(
+            excluded_path, index=False
+        )
+        print(f"Excluded {len(excluded)} exact-duplicate copies; listed in {excluded_path}")
     optional_metadata = (
         pd.read_csv(args.metadata_sidecar, dtype=str)
         if args.metadata_sidecar is not None

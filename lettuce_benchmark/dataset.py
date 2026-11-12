@@ -145,6 +145,31 @@ def audit_dataset(
     return report
 
 
+def drop_exact_duplicates(audit: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Remove redundant byte-identical copies, keeping the canonical image.
+
+    Returns ``(kept_audit, excluded_rows)``. Duplicates whose labels disagree
+    are a labelling conflict, not redundancy, so they raise ``ValueError`` and
+    must be reviewed manually instead of being resolved silently.
+    """
+    required = {"image_id", "label", "exact_duplicate_of"}
+    missing = required.difference(audit.columns)
+    if missing:
+        raise ValueError(f"Audit report is missing columns: {sorted(missing)}")
+    labels = dict(zip(audit["image_id"], audit["label"]))
+    duplicates = audit[audit["exact_duplicate_of"].notna()]
+    conflicts = [
+        (row.image_id, row.exact_duplicate_of)
+        for row in duplicates.itertuples(index=False)
+        if labels.get(row.exact_duplicate_of) != row.label
+    ]
+    if conflicts:
+        raise ValueError(f"Exact duplicates with different labels need manual review: {conflicts}")
+    excluded = duplicates.copy()
+    kept = audit[audit["exact_duplicate_of"].isna()].copy()
+    return kept.reset_index(drop=True), excluded.reset_index(drop=True)
+
+
 def create_metadata(
     audit: pd.DataFrame,
     image_root: str | Path | None = None,
