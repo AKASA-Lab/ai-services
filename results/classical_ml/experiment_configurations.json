@@ -1,0 +1,1249 @@
+{
+  "selection_metric": "macro_f1",
+  "validation_protocol": "Fit each candidate scaler/classifier on train only; select by validation macro-F1; refit selected pipeline on train+validation; evaluate test once.",
+  "confidence": "SVM predicted-class softmax score (uncalibrated); Random Forest predicted-class probability.",
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "folds_per_seed": 4,
+  "class_names": [
+    "FN",
+    "-N",
+    "-P",
+    "-K"
+  ],
+  "prediction_columns": [
+    "image_id",
+    "seed",
+    "fold",
+    "experiment",
+    "true_label",
+    "predicted_label",
+    "confidence",
+    "partition"
+  ],
+  "feature_extraction": {
+    "unique_images": 203,
+    "feature_groups": [
+      "color_stats",
+      "color_histograms",
+      "glcm",
+      "lbp"
+    ],
+    "feature_dimensions": {
+      "color_stats": 18,
+      "color_histograms": 96,
+      "glcm": 4,
+      "lbp": 10
+    },
+    "image_size": 256,
+    "total_wall_seconds": 9.245305800002825,
+    "seconds_per_image": 0.045543378325137066,
+    "scope": "all feature groups extracted once per unique image and reused"
+  },
+  "search_spaces": {
+    "svm": {
+      "kernel": "rbf",
+      "class_weight": "balanced",
+      "candidates": [
+        {
+          "C": 0.1,
+          "gamma": "scale"
+        },
+        {
+          "C": 0.1,
+          "gamma": 0.01
+        },
+        {
+          "C": 0.1,
+          "gamma": 0.001
+        },
+        {
+          "C": 1.0,
+          "gamma": "scale"
+        },
+        {
+          "C": 1.0,
+          "gamma": 0.01
+        },
+        {
+          "C": 1.0,
+          "gamma": 0.001
+        },
+        {
+          "C": 10.0,
+          "gamma": "scale"
+        },
+        {
+          "C": 10.0,
+          "gamma": 0.01
+        },
+        {
+          "C": 10.0,
+          "gamma": 0.001
+        }
+      ]
+    },
+    "random_forest": {
+      "class_weight": "balanced",
+      "candidates": [
+        {
+          "n_estimators": 100,
+          "max_depth": null,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 100,
+          "max_depth": null,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 100,
+          "max_depth": 20,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 100,
+          "max_depth": 20,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 300,
+          "max_depth": null,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 300,
+          "max_depth": null,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 300,
+          "max_depth": 20,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt"
+        },
+        {
+          "n_estimators": 300,
+          "max_depth": 20,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        }
+      ]
+    }
+  },
+  "versions": {
+    "python": "3.14.6",
+    "numpy": "2.5.1",
+    "pandas": "3.0.3",
+    "opencv": "5.0.0",
+    "scikit_image": "0.26.0",
+    "scikit_learn": "1.9.1"
+  },
+  "experiments": {
+    "E1": {
+      "feature_groups": [
+        "color_stats"
+      ],
+      "feature_dimension": 18,
+      "classifier": "svm",
+      "runs": [
+        {
+          "seed": 42,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9472222222222222,
+          "hyperparameter_selection_seconds": 0.13066819999949075,
+          "classifier_training_seconds": 0.0024583999984315597,
+          "prediction_latency_seconds": 0.0012984999993932433,
+          "model_size_bytes": 17818
+        },
+        {
+          "seed": 42,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8955722639933166,
+          "hyperparameter_selection_seconds": 0.12189619999844581,
+          "classifier_training_seconds": 0.0024044000019785017,
+          "prediction_latency_seconds": 0.002226899996458087,
+          "model_size_bytes": 18334
+        },
+        {
+          "seed": 42,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9736842105263157,
+          "hyperparameter_selection_seconds": 0.12134099999821046,
+          "classifier_training_seconds": 0.0025632999968365766,
+          "prediction_latency_seconds": 0.0014062999980524182,
+          "model_size_bytes": 21086
+        },
+        {
+          "seed": 42,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8482954545454546,
+          "hyperparameter_selection_seconds": 0.11958410000079311,
+          "classifier_training_seconds": 0.00344030000269413,
+          "prediction_latency_seconds": 0.0019304999950691126,
+          "model_size_bytes": 18678
+        },
+        {
+          "seed": 123,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": 0.01
+          },
+          "validation_macro_f1": 0.899579831932773,
+          "hyperparameter_selection_seconds": 0.11952650000603171,
+          "classifier_training_seconds": 0.002482299998519011,
+          "prediction_latency_seconds": 0.0014268000013544224,
+          "model_size_bytes": 24173
+        },
+        {
+          "seed": 123,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8269841269841269,
+          "hyperparameter_selection_seconds": 0.11568670000269776,
+          "classifier_training_seconds": 0.0024451999997836538,
+          "prediction_latency_seconds": 0.0012848999976995401,
+          "model_size_bytes": 17646
+        },
+        {
+          "seed": 123,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8973684210526316,
+          "hyperparameter_selection_seconds": 0.11748879999504425,
+          "classifier_training_seconds": 0.003720900000189431,
+          "prediction_latency_seconds": 0.0017030000017257407,
+          "model_size_bytes": 17130
+        },
+        {
+          "seed": 123,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8673656065296932,
+          "hyperparameter_selection_seconds": 0.11321680000401102,
+          "classifier_training_seconds": 0.00291579999611713,
+          "prediction_latency_seconds": 0.002310399999259971,
+          "model_size_bytes": 18334
+        },
+        {
+          "seed": 2026,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9749373433583959,
+          "hyperparameter_selection_seconds": 0.11997209999390179,
+          "classifier_training_seconds": 0.002571400000306312,
+          "prediction_latency_seconds": 0.0012870999998995103,
+          "model_size_bytes": 17647
+        },
+        {
+          "seed": 2026,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8818452380952381,
+          "hyperparameter_selection_seconds": 0.11867290000373032,
+          "classifier_training_seconds": 0.002493699998012744,
+          "prediction_latency_seconds": 0.001279299998714123,
+          "model_size_bytes": 18163
+        },
+        {
+          "seed": 2026,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.01
+          },
+          "validation_macro_f1": 0.95,
+          "hyperparameter_selection_seconds": 0.1190160999976797,
+          "classifier_training_seconds": 0.0028862999970442615,
+          "prediction_latency_seconds": 0.0013063000005786307,
+          "model_size_bytes": 16778
+        },
+        {
+          "seed": 2026,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.848226850548832,
+          "hyperparameter_selection_seconds": 0.1170750000019325,
+          "classifier_training_seconds": 0.0024722000016481616,
+          "prediction_latency_seconds": 0.0013352000023587607,
+          "model_size_bytes": 21431
+        }
+      ]
+    },
+    "E2": {
+      "feature_groups": [
+        "color_histograms"
+      ],
+      "feature_dimension": 96,
+      "classifier": "svm",
+      "runs": [
+        {
+          "seed": 42,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.917391304347826,
+          "hyperparameter_selection_seconds": 0.12363100000220584,
+          "classifier_training_seconds": 0.0035021000003325753,
+          "prediction_latency_seconds": 0.0016790000008768402,
+          "model_size_bytes": 103547
+        },
+        {
+          "seed": 42,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9472222222222222,
+          "hyperparameter_selection_seconds": 0.12308769999799551,
+          "classifier_training_seconds": 0.003426000002946239,
+          "prediction_latency_seconds": 0.0022517000033985823,
+          "model_size_bytes": 101159
+        },
+        {
+          "seed": 42,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.8951680672268908,
+          "hyperparameter_selection_seconds": 0.12440220000280533,
+          "classifier_training_seconds": 0.0025510999985272065,
+          "prediction_latency_seconds": 0.0014815999966231175,
+          "model_size_bytes": 86822
+        },
+        {
+          "seed": 42,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8157191106107514,
+          "hyperparameter_selection_seconds": 0.12512819999392377,
+          "classifier_training_seconds": 0.003360800001246389,
+          "prediction_latency_seconds": 0.002232699996966403,
+          "model_size_bytes": 100363
+        },
+        {
+          "seed": 123,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9189775910364144,
+          "hyperparameter_selection_seconds": 0.14049420000083046,
+          "classifier_training_seconds": 0.003308499995910097,
+          "prediction_latency_seconds": 0.0017112000059569255,
+          "model_size_bytes": 97975
+        },
+        {
+          "seed": 123,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.7693452380952381,
+          "hyperparameter_selection_seconds": 0.12067279999610037,
+          "classifier_training_seconds": 0.002444500001729466,
+          "prediction_latency_seconds": 0.002004400004807394,
+          "model_size_bytes": 86026
+        },
+        {
+          "seed": 123,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8951754385964913,
+          "hyperparameter_selection_seconds": 0.12536700000055134,
+          "classifier_training_seconds": 0.0032121999975061044,
+          "prediction_latency_seconds": 0.0016703000001143664,
+          "model_size_bytes": 100363
+        },
+        {
+          "seed": 123,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.8271929824561404,
+          "hyperparameter_selection_seconds": 0.12344380000286037,
+          "classifier_training_seconds": 0.0025855999992927536,
+          "prediction_latency_seconds": 0.0015125000063562766,
+          "model_size_bytes": 87618
+        },
+        {
+          "seed": 2026,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9471595655806182,
+          "hyperparameter_selection_seconds": 0.1232843000034336,
+          "classifier_training_seconds": 0.004010299999208655,
+          "prediction_latency_seconds": 0.0023548000026494265,
+          "model_size_bytes": 98772
+        },
+        {
+          "seed": 2026,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9211309523809524,
+          "hyperparameter_selection_seconds": 0.12139010000100825,
+          "classifier_training_seconds": 0.003337699999974575,
+          "prediction_latency_seconds": 0.0016619999951217324,
+          "model_size_bytes": 101160
+        },
+        {
+          "seed": 2026,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.8960227272727272,
+          "hyperparameter_selection_seconds": 0.12425139999686508,
+          "classifier_training_seconds": 0.0032219999993685633,
+          "prediction_latency_seconds": 0.001462200001697056,
+          "model_size_bytes": 84435
+        },
+        {
+          "seed": 2026,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.8193181818181818,
+          "hyperparameter_selection_seconds": 0.12001089999830583,
+          "classifier_training_seconds": 0.002623599997605197,
+          "prediction_latency_seconds": 0.0018158000020775944,
+          "model_size_bytes": 94783
+        }
+      ]
+    },
+    "E3": {
+      "feature_groups": [
+        "glcm",
+        "lbp"
+      ],
+      "feature_dimension": 14,
+      "classifier": "svm",
+      "runs": [
+        {
+          "seed": 42,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8074168797953964,
+          "hyperparameter_selection_seconds": 0.12157769999612356,
+          "classifier_training_seconds": 0.002532999998948071,
+          "prediction_latency_seconds": 0.0014053999984753318,
+          "model_size_bytes": 20130
+        },
+        {
+          "seed": 42,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.674183788347875,
+          "hyperparameter_selection_seconds": 0.11914599999727216,
+          "classifier_training_seconds": 0.0030613000053563155,
+          "prediction_latency_seconds": 0.0022485000008600764,
+          "model_size_bytes": 17190
+        },
+        {
+          "seed": 42,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.851921470342523,
+          "hyperparameter_selection_seconds": 0.12134140000125626,
+          "classifier_training_seconds": 0.0025830999948084354,
+          "prediction_latency_seconds": 0.0013780000008409843,
+          "model_size_bytes": 18870
+        },
+        {
+          "seed": 42,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.7145676691729324,
+          "hyperparameter_selection_seconds": 0.11894050000410061,
+          "classifier_training_seconds": 0.0025757999974302948,
+          "prediction_latency_seconds": 0.001676600004429929,
+          "model_size_bytes": 20690
+        },
+        {
+          "seed": 123,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8207070707070707,
+          "hyperparameter_selection_seconds": 0.12174760000198148,
+          "classifier_training_seconds": 0.002570299999206327,
+          "prediction_latency_seconds": 0.001305300000240095,
+          "model_size_bytes": 16770
+        },
+        {
+          "seed": 123,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8067632850241545,
+          "hyperparameter_selection_seconds": 0.11673000000155298,
+          "classifier_training_seconds": 0.0026415000029373914,
+          "prediction_latency_seconds": 0.0013598000005003996,
+          "model_size_bytes": 17470
+        },
+        {
+          "seed": 123,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8407563025210084,
+          "hyperparameter_selection_seconds": 0.12734099999943282,
+          "classifier_training_seconds": 0.0027322000023559667,
+          "prediction_latency_seconds": 0.0013746000040555373,
+          "model_size_bytes": 17470
+        },
+        {
+          "seed": 123,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.7521929824561404,
+          "hyperparameter_selection_seconds": 0.11981650000234367,
+          "classifier_training_seconds": 0.002737000002525747,
+          "prediction_latency_seconds": 0.0023149999979068525,
+          "model_size_bytes": 17470
+        },
+        {
+          "seed": 2026,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.7921992481203007,
+          "hyperparameter_selection_seconds": 0.11735369999951217,
+          "classifier_training_seconds": 0.0034780999994836748,
+          "prediction_latency_seconds": 0.0014440000013564713,
+          "model_size_bytes": 20411
+        },
+        {
+          "seed": 2026,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.625877192982456,
+          "hyperparameter_selection_seconds": 0.11917949999769917,
+          "classifier_training_seconds": 0.00258169999870006,
+          "prediction_latency_seconds": 0.0014130000054137781,
+          "model_size_bytes": 20831
+        },
+        {
+          "seed": 2026,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.6301406926406926,
+          "hyperparameter_selection_seconds": 0.11808190000010654,
+          "classifier_training_seconds": 0.002589399999123998,
+          "prediction_latency_seconds": 0.0018861999997170642,
+          "model_size_bytes": 19991
+        },
+        {
+          "seed": 2026,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.6861685463659148,
+          "hyperparameter_selection_seconds": 0.11785940000117989,
+          "classifier_training_seconds": 0.003797500001383014,
+          "prediction_latency_seconds": 0.002060300001176074,
+          "model_size_bytes": 18311
+        }
+      ]
+    },
+    "E4": {
+      "feature_groups": [
+        "color_stats",
+        "color_histograms",
+        "glcm",
+        "lbp"
+      ],
+      "feature_dimension": 128,
+      "classifier": "svm",
+      "runs": [
+        {
+          "seed": 42,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8944444444444444,
+          "hyperparameter_selection_seconds": 0.12696460000006482,
+          "classifier_training_seconds": 0.0032922999962465838,
+          "prediction_latency_seconds": 0.0018488999994588085,
+          "model_size_bytes": 133159
+        },
+        {
+          "seed": 42,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9472222222222222,
+          "hyperparameter_selection_seconds": 0.13088960000459338,
+          "classifier_training_seconds": 0.003406100004212931,
+          "prediction_latency_seconds": 0.001804300001822412,
+          "model_size_bytes": 138419
+        },
+        {
+          "seed": 42,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.920843776106934,
+          "hyperparameter_selection_seconds": 0.1170464999959222,
+          "classifier_training_seconds": 0.002516799999284558,
+          "prediction_latency_seconds": 0.0020641000010073185,
+          "model_size_bytes": 103694
+        },
+        {
+          "seed": 42,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8678581480439066,
+          "hyperparameter_selection_seconds": 0.11894929999834858,
+          "classifier_training_seconds": 0.0034083999998983927,
+          "prediction_latency_seconds": 0.0017068999950424768,
+          "model_size_bytes": 135263
+        },
+        {
+          "seed": 123,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9471595655806181,
+          "hyperparameter_selection_seconds": 0.12161139999807347,
+          "classifier_training_seconds": 0.004625000001396984,
+          "prediction_latency_seconds": 0.002388300003076438,
+          "model_size_bytes": 133159
+        },
+        {
+          "seed": 123,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8717627401837927,
+          "hyperparameter_selection_seconds": 0.16842970000288915,
+          "classifier_training_seconds": 0.003447099996265024,
+          "prediction_latency_seconds": 0.0017758000030880794,
+          "model_size_bytes": 136315
+        },
+        {
+          "seed": 123,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8944444444444444,
+          "hyperparameter_selection_seconds": 0.12252790000638925,
+          "classifier_training_seconds": 0.004077199999301229,
+          "prediction_latency_seconds": 0.003116399995633401,
+          "model_size_bytes": 143679
+        },
+        {
+          "seed": 123,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.974937343358396,
+          "hyperparameter_selection_seconds": 0.13827380000293488,
+          "classifier_training_seconds": 0.0042975999967893586,
+          "prediction_latency_seconds": 0.0024752999961492606,
+          "model_size_bytes": 142627
+        },
+        {
+          "seed": 2026,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.973389355742297,
+          "hyperparameter_selection_seconds": 0.12596410000696778,
+          "classifier_training_seconds": 0.0036984999969718046,
+          "prediction_latency_seconds": 0.0018559000018285587,
+          "model_size_bytes": 133160
+        },
+        {
+          "seed": 2026,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 1.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.9211309523809524,
+          "hyperparameter_selection_seconds": 0.12575600000127451,
+          "classifier_training_seconds": 0.003488199996354524,
+          "prediction_latency_seconds": 0.002227500001026783,
+          "model_size_bytes": 141576
+        },
+        {
+          "seed": 2026,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": 0.001
+          },
+          "validation_macro_f1": 0.8784461152882205,
+          "hyperparameter_selection_seconds": 0.11989140000514453,
+          "classifier_training_seconds": 0.002646599998115562,
+          "prediction_latency_seconds": 0.0015293000033125281,
+          "model_size_bytes": 104747
+        },
+        {
+          "seed": 2026,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "C": 10.0,
+            "gamma": "scale"
+          },
+          "validation_macro_f1": 0.8722222222222222,
+          "hyperparameter_selection_seconds": 0.12352690000261646,
+          "classifier_training_seconds": 0.004049300005135592,
+          "prediction_latency_seconds": 0.0019882999986293726,
+          "model_size_bytes": 140524
+        }
+      ]
+    },
+    "E5": {
+      "feature_groups": [
+        "color_stats",
+        "color_histograms",
+        "glcm",
+        "lbp"
+      ],
+      "feature_dimension": 128,
+      "classifier": "random_forest",
+      "runs": [
+        {
+          "seed": 42,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.9472222222222222,
+          "hyperparameter_selection_seconds": 2.4856427000049734,
+          "classifier_training_seconds": 0.13986950000253273,
+          "prediction_latency_seconds": 0.05133489999570884,
+          "model_size_bytes": 320443
+        },
+        {
+          "seed": 42,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.8898809523809523,
+          "hyperparameter_selection_seconds": 2.4072728999963147,
+          "classifier_training_seconds": 0.13642650000110734,
+          "prediction_latency_seconds": 0.050488799999584444,
+          "model_size_bytes": 378820
+        },
+        {
+          "seed": 42,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.9471595655806181,
+          "hyperparameter_selection_seconds": 2.508795200003078,
+          "classifier_training_seconds": 0.1405739000038011,
+          "prediction_latency_seconds": 0.06188809999730438,
+          "model_size_bytes": 311611
+        },
+        {
+          "seed": 42,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "n_estimators": 300,
+            "max_depth": null,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.898989898989899,
+          "hyperparameter_selection_seconds": 2.4148611999989953,
+          "classifier_training_seconds": 0.3764949999967939,
+          "prediction_latency_seconds": 0.08360009999887552,
+          "model_size_bytes": 1117024
+        },
+        {
+          "seed": 123,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.87468671679198,
+          "hyperparameter_selection_seconds": 2.4603616000022157,
+          "classifier_training_seconds": 0.13649599999916973,
+          "prediction_latency_seconds": 0.04906120000669034,
+          "model_size_bytes": 311035
+        },
+        {
+          "seed": 123,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.7526629072681704,
+          "hyperparameter_selection_seconds": 2.4222681000028388,
+          "classifier_training_seconds": 0.13498229999822797,
+          "prediction_latency_seconds": 0.05900609999662265,
+          "model_size_bytes": 323707
+        },
+        {
+          "seed": 123,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 300,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.9472222222222222,
+          "hyperparameter_selection_seconds": 2.469890899999882,
+          "classifier_training_seconds": 0.3781740999984322,
+          "prediction_latency_seconds": 0.09104719999595545,
+          "model_size_bytes": 979334
+        },
+        {
+          "seed": 123,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.9460227272727273,
+          "hyperparameter_selection_seconds": 2.427454700002272,
+          "classifier_training_seconds": 0.15149150000070222,
+          "prediction_latency_seconds": 0.06539150000025984,
+          "model_size_bytes": 327555
+        },
+        {
+          "seed": 2026,
+          "fold": 1,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.95,
+          "hyperparameter_selection_seconds": 2.437156899999536,
+          "classifier_training_seconds": 0.13449759999639355,
+          "prediction_latency_seconds": 0.05779710000206251,
+          "model_size_bytes": 373061
+        },
+        {
+          "seed": 2026,
+          "fold": 2,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 100,
+            "max_depth": null,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.9003658879819871,
+          "hyperparameter_selection_seconds": 2.458109200000763,
+          "classifier_training_seconds": 0.15151200000400422,
+          "prediction_latency_seconds": 0.058891400003631134,
+          "model_size_bytes": 372101
+        },
+        {
+          "seed": 2026,
+          "fold": 3,
+          "training_images_for_selection": 121,
+          "validation_images": 31,
+          "final_fit_images": 152,
+          "test_images": 51,
+          "selected_parameters": {
+            "n_estimators": 300,
+            "max_depth": null,
+            "min_samples_leaf": 2,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.8031746031746032,
+          "hyperparameter_selection_seconds": 2.4210059999968507,
+          "classifier_training_seconds": 0.37458080000214977,
+          "prediction_latency_seconds": 0.10300370000186376,
+          "model_size_bytes": 931143
+        },
+        {
+          "seed": 2026,
+          "fold": 4,
+          "training_images_for_selection": 122,
+          "validation_images": 31,
+          "final_fit_images": 153,
+          "test_images": 50,
+          "selected_parameters": {
+            "n_estimators": 300,
+            "max_depth": null,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt"
+          },
+          "validation_macro_f1": 0.7975490196078431,
+          "hyperparameter_selection_seconds": 2.5437396000052104,
+          "classifier_training_seconds": 0.374458099999174,
+          "prediction_latency_seconds": 0.08274350000283448,
+          "model_size_bytes": 1106081
+        }
+      ]
+    }
+  }
+}

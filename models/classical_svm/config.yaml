@@ -1,7 +1,52 @@
 model:
   name: classical_color_texture_svm
-  classifier: SVC
-  kernel: rbf
-  class_weight: balanced
-training:
-  feature_groups: [rgb, hsv, lab, glcm, lbp]
+features:
+  image_size: 256
+  color_statistics: [rgb, hsv, lab]
+  color_histogram_bins: 16
+  glcm_properties: [contrast, homogeneity, energy, correlation]
+  glcm_distances: [1, 2]
+  glcm_angles: [0, 0.7853981634, 1.5707963268, 2.3561944902]
+  lbp:
+    method: uniform
+    points: 8
+    radius: 1
+experiments:
+  E1: {features: [color_stats], classifier: svm}
+  E2: {features: [color_histograms], classifier: svm}
+  E3: {features: [glcm, lbp], classifier: svm}
+  E4: {features: [color_stats, color_histograms, glcm, lbp], classifier: svm}
+  E5: {features: [color_stats, color_histograms, glcm, lbp], classifier: random_forest}
+selection:
+  metric: macro_f1
+  refit_partitions: [train, validation]
+  svm:
+    kernel: rbf
+    class_weight: balanced
+    candidates:
+      - {C: 0.1, gamma: scale}
+      - {C: 0.1, gamma: 0.01}
+      - {C: 0.1, gamma: 0.001}
+      - {C: 1.0, gamma: scale}
+      - {C: 1.0, gamma: 0.01}
+      - {C: 1.0, gamma: 0.001}
+      - {C: 10.0, gamma: scale}
+      - {C: 1.0, gamma: 0.01}
+      - {C: 10.0, gamma: 0.01}
+      - {C: 10.0, gamma: 0.001}
+  random_forest:
+    class_weight: balanced
+    fixed_parameters: {max_features: sqrt}
+    candidates:
+      - {n_estimators: 100, max_depth: null, min_samples_leaf: 1}
+      - {n_estimators: 100, max_depth: null, min_samples_leaf: 2}
+      - {n_estimators: 100, max_depth: 20, min_samples_leaf: 1}
+      - {n_estimators: 100, max_depth: 20, min_samples_leaf: 2}
+      - {n_estimators: 300, max_depth: null, min_samples_leaf: 1}
+      - {n_estimators: 300, max_depth: null, min_samples_leaf: 2}
+      - {n_estimators: 300, max_depth: 20, min_samples_leaf: 1}
+      - {n_estimators: 300, max_depth: 20, min_samples_leaf: 2}
+paths:
+  image_root: data/raw
+  splits_dir: data/splits
+  output_dir: results/classical_ml
