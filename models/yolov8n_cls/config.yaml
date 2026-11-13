@@ -1,8 +1,59 @@
 model:
   name: yolov8n-cls
+  weights: yolov8n-cls.pt           # Ultralytics ImageNet-1k pretrained classifier (downloaded once)
   pretrained: true
   num_classes: 4
+
+data:
+  image_root: data/raw
+  splits_dir: data/splits
+  safe_crop: 960                    # fixed crop that removes the DALL-E colour bar (docs/dataset_audit.md)
+  cache_size: 256                   # cropped image is resized to this once, then augmented / resized to imgsz
+
+# Passed unchanged to ultralytics YOLO.train(); names follow ultralytics/cfg/default.yaml.
+# `seed`, `data`, `project`, `name` and `device` are set per run by train.py.
 training:
-  batch_size: 16
-  max_epochs: 15
-  image_size: 224
+  epochs: 15
+  batch: 16
+  imgsz: 224
+  nbs: 16                           # optimiser step every batch (default 64 = accumulate 4 batches -> 2 steps/epoch here)
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01                         # Ultralytics default linear decay to lr0 * lrf at the last epoch
+  momentum: 0.9                     # AdamW beta1
+  weight_decay: 0.0001
+  warmup_epochs: 1                  # ~8 iterations of linear warm-up
+  warmup_bias_lr: 0.0               # default 0.1 is meant for SGD; far too high for AdamW
+  cos_lr: false
+  cls_pw: 1.0                       # inverse-frequency class weights from this run's train partition
+  dropout: 0.0                      # Ultralytics default for the YOLOv8-cls head
+  pretrained: true
+  # training-only augmentation (validation/test are only resized to imgsz)
+  scale: 0.25                       # RandomResizedCrop area range (0.75, 1.0); aspect ratio range 3/4-4/3 (fixed by Ultralytics)
+  fliplr: 0.5
+  flipud: 0.0
+  hsv_h: 0.0                        # no colour jitter: leaf colour is the signal
+  hsv_s: 0.0
+  hsv_v: 0.0
+  auto_augment: null                # RandAugment off (it changes colour/contrast)
+  erasing: 0.0                      # random erasing off
+  # housekeeping
+  patience: 100                     # > epochs, so no early stopping
+  amp: false
+  workers: 0
+  deterministic: true
+  cache: false
+  val: true
+  plots: false
+  save_period: 1                    # keep every epoch so train.py can select by validation macro F1
+  verbose: false
+
+selection:
+  metric: val_macro_f1              # best epoch on validation macro F1 ...
+  tie_breaker: val_loss             # ... ties go to the lower validation (class-weighted CE) loss, then the earlier epoch
+
+efficiency:
+  latency_device: cpu
+  latency_threads: 2                # same thread count as the MobileNetV2 (Person 1) measurement
+  latency_warmup: 10
+  latency_iterations: 50
