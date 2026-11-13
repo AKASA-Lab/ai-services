@@ -1,0 +1,14 @@
+{
+  "image_files_discovered": 208,
+  "valid_images": 208,
+  "invalid_images": 0,
+  "unclassified_valid_images": 0,
+  "class_distribution_valid_labeled": {
+    "FN": 12,
+    "-N": 58,
+    "-P": 66,
+    "-K": 72
+  },
+  "exact_duplicate_rows": 5,
+  "near_duplicate_candidates_reported": true
+}

@@ -72,7 +72,7 @@ python -m lettuce_benchmark.cli.generate_splits data/processed/metadata.csv --ou
 python -m lettuce_benchmark.cli.validate_splits data/splits
 ```
 
-These commands have not been run against the Kaggle archive in this repository. Reported counts below are literature/context figures only, not a verified local audit.
+These commands have now been run against the Kaggle archive: see [docs/dataset_audit.md](./docs/dataset_audit.md) for the verified counts, the duplicate policy (203 images used) and a class-correlated watermark issue that every member should read. The shared split files are in `data/splits/` (usage: [data/README.md](./data/README.md)).
 
 ---
 
@@ -572,12 +572,12 @@ The final report must distinguish benchmark findings from claims about the team'
 
 ## 14. Team checklist
 
-- [ ] Dataset downloaded and audited.
-- [ ] Actual class counts and folder structure verified.
-- [ ] Corrupt, duplicate and near-duplicate images checked.
-- [ ] Shared metadata manifest created.
-- [ ] Shared repeated stratified 4-fold split manifests generated for all three seeds.
-- [ ] Validation subsets created from development data only.
+- [x] Dataset downloaded and audited.
+- [x] Actual class counts and folder structure verified.
+- [x] Corrupt, duplicate and near-duplicate images checked.
+- [x] Shared metadata manifest created.
+- [x] Shared repeated stratified 4-fold split manifests generated for all three seeds.
+- [x] Validation subsets created from development data only.
 - [ ] All five approaches implemented.
 - [ ] All models evaluated using identical test membership.
 - [ ] Predictions exported in the common format.

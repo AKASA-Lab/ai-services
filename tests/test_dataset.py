@@ -70,3 +70,28 @@ def test_unknown_optional_metadata_is_rejected(tmp_path: Path) -> None:
                 "plant_id": ["plant-1"],
             }),
         )
+
+
+def test_drop_exact_duplicates_keeps_canonical_copy(tmp_path: Path) -> None:
+    from lettuce_benchmark.dataset import drop_exact_duplicates
+
+    first = tmp_path / "-K" / "a.png"
+    first.parent.mkdir()
+    Image.new("RGB", (6, 6), color=(1, 2, 3)).save(first)
+    (tmp_path / "-K" / "b.png").write_bytes(first.read_bytes())
+    Image.new("RGB", (6, 6), color=(9, 9, 9)).save(tmp_path / "-K" / "c.png")
+    kept, excluded = drop_exact_duplicates(audit_dataset(tmp_path))
+    assert sorted(kept["image_path"]) == ["-K/a.png", "-K/c.png"]
+    assert excluded["image_path"].tolist() == ["-K/b.png"]
+
+
+def test_drop_exact_duplicates_rejects_label_conflicts(tmp_path: Path) -> None:
+    from lettuce_benchmark.dataset import drop_exact_duplicates
+
+    first = tmp_path / "FN" / "a.png"
+    first.parent.mkdir()
+    Image.new("RGB", (6, 6), color=(1, 2, 3)).save(first)
+    (tmp_path / "-N").mkdir()
+    (tmp_path / "-N" / "b.png").write_bytes(first.read_bytes())
+    with pytest.raises(ValueError, match="different labels"):
+        drop_exact_duplicates(audit_dataset(tmp_path))
