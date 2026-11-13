@@ -73,7 +73,11 @@ originally had the DALL·E colour bar and images that did not (`accuracy_by_colo
 
 So the model is not just "detecting the bar". FN still sits entirely in the
 1024×1024 (likely AI-generated) group, though, so other style differences between the two groups
-could still help on FN. Grad-CAM would be the next check.
+could still help on FN.
+
+**Grad-CAM** ([`gradcam/`](./gradcam/README.md)): on average 82% of the attention lands on the
+plant, and the old colour-bar corner gets only 1.8%. The clearest bad case is `-P/p44` → -N,
+where the model looked at the black background instead of the leaves.
 
 ## Limitations
 

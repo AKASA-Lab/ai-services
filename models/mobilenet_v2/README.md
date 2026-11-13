@@ -13,6 +13,7 @@ The results are in [`results/member_1/`](../../results/member_1/).
 | `config.yaml` | Every setting used (data, augmentation, optimiser, selection metric) |
 | `train.py` | Trains/evaluates the runs, writes predictions, per-run history and metadata |
 | `summarize.py` | Recomputes metrics from the saved predictions with the shared evaluator and builds `results/member_1/` |
+| `gradcam.py` | Grad-CAM heatmaps and attention statistics → `results/member_1/gradcam/` |
 
 ## Pipeline
 
