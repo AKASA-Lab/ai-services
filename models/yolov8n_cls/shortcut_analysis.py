@@ -55,6 +55,37 @@ def get_leaf_mask_hsv(rgb_uint8: np.ndarray) -> np.ndarray:
     return leaf
 
 
+def resolve_image_path(
+    image_id: str,
+    audit_or_metadata_df: pd.DataFrame | None = None,
+    metadata_path: Path | str = Path("data/processed/metadata.csv"),
+) -> str:
+    """Resolve the real relative image path (e.g. 'FN/fn1.png') for an image_id.
+
+    In this benchmark, image_id is a 16-character hex hash (e.g. 'a914de3754e50ed7'),
+    while physical files in data/raw/ and the preprocessed cache use the original
+    relative path (e.g. 'FN/fn1.png'). This helper looks up the true path from audit
+    or metadata tables.
+    """
+    if audit_or_metadata_df is not None and "image_id" in audit_or_metadata_df.columns and "image_path" in audit_or_metadata_df.columns:
+        match = audit_or_metadata_df.loc[audit_or_metadata_df["image_id"] == str(image_id), "image_path"]
+        if not match.empty and pd.notna(match.iloc[0]):
+            return str(match.iloc[0])
+
+    meta_p = Path(metadata_path)
+    if meta_p.is_file():
+        meta_df = pd.read_csv(meta_p, dtype={"image_id": str})
+        match = meta_df.loc[meta_df["image_id"] == str(image_id), "image_path"]
+        if not match.empty and pd.notna(match.iloc[0]):
+            return str(match.iloc[0])
+
+    raise KeyError(
+        f"Cannot resolve image_path for image_id '{image_id}'. "
+        f"image_id is a hex hash, not a relative path; ensure metadata.csv or audit.csv is provided."
+    )
+
+
+
 def analyze_shortcuts(
     predictions_path: Path,
     audit_path: Path,
@@ -117,7 +148,7 @@ def analyze_shortcuts(
     for row in merged.itertuples(index=False):
         rel_path = getattr(row, "image_path", None)
         if not rel_path or pd.isna(rel_path):
-            rel_path = f"{row.true_label}/{row.image_id}.png"
+            rel_path = resolve_image_path(str(row.image_id), audit_or_metadata_df=audit)
         img_path = cached_path(cache_root, str(rel_path))
         if not img_path.is_file():
             raise FileNotFoundError(f"Cached image missing: {img_path}")
