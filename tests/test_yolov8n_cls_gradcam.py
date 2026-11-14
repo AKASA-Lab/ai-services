@@ -155,6 +155,41 @@ def test_missing_checkpoint_raises_filenotfound() -> None:
             )
 
 
+def test_resolve_image_path_hex_hash() -> None:
+    """Regression test: image_id is a hex hash, NOT a file path.
+
+    The old fallback f"{label}/{image_id}.png" (e.g. '-K/a191e9b7b9d70a56.png')
+    is wrong because the real path is '-K/k_1.png'. This test ensures
+    resolve_image_path() correctly looks up the real path from audit/metadata.
+    """
+    from models.yolov8n_cls.shortcut_analysis import resolve_image_path
+
+    # Build a synthetic audit DataFrame with real-format hex-hash IDs
+    audit_df = pd.DataFrame({
+        "image_id": ["a914de3754e50ed7", "b8291fcae0e4d231", "cdef012345678900"],
+        "image_path": ["FN/fn1.png", "-K/k_1.png", "-N/n_5.png"],
+        "label": ["FN", "-K", "-N"],
+    })
+
+    # Successful lookup by hex hash
+    assert resolve_image_path("a914de3754e50ed7", audit_or_metadata_df=audit_df) == "FN/fn1.png"
+    assert resolve_image_path("b8291fcae0e4d231", audit_or_metadata_df=audit_df) == "-K/k_1.png"
+    assert resolve_image_path("cdef012345678900", audit_or_metadata_df=audit_df) == "-N/n_5.png"
+
+    # The old fallback would have returned the WRONG path
+    wrong_fallback = f"-K/b8291fcae0e4d231.png"  # hash-based, not the real name
+    correct_path = resolve_image_path("b8291fcae0e4d231", audit_or_metadata_df=audit_df)
+    assert correct_path != wrong_fallback, (
+        f"Path resolution should NOT return the old hash-based fallback. "
+        f"Got '{correct_path}', old fallback would be '{wrong_fallback}'"
+    )
+
+    # Missing ID raises KeyError
+    with pytest.raises(KeyError, match="Cannot resolve image_path"):
+        resolve_image_path("0000000000000000", audit_or_metadata_df=audit_df,
+                           metadata_path=Path("nonexistent/metadata.csv"))
+
+
 def test_plant_mask_and_overlay() -> None:
     rgb = np.zeros((224, 224, 3), dtype=np.uint8)
     rgb[50:150, 50:150] = [30, 200, 50]  # green plant region
