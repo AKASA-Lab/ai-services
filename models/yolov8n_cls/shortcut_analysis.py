@@ -234,6 +234,114 @@ def analyze_shortcuts(
     return metrics_df, control_df
 
 
+def analyze_within_1024_group(
+    predictions_path: Path | str = Path("results/member_4/predictions.csv"),
+    audit_path: Path | str = Path("data/processed/audit.csv"),
+    output_dir: Path | str | None = None,
+) -> dict[str, Any]:
+    """Analyze model performance restricted to the 1024x1024 image group.
+
+    Computes confusion matrix, per-class recall, and the rate at which
+    non-FN images from the 1024x1024 group are predicted as FN.
+    This analysis requires only predictions.csv and audit.csv (no checkpoints).
+
+    Args:
+        predictions_path: Path to held-out predictions CSV.
+        audit_path: Path to audit CSV with width/height columns.
+        output_dir: Optional directory to save results CSV.
+
+    Returns:
+        dict with keys: 'confusion_matrix', 'per_class_recall',
+        'non_fn_predicted_fn_count', 'non_fn_predicted_fn_rate',
+        'non_fn_predicted_fn_details', 'total_1024_predictions',
+        'results_df'.
+    """
+    predictions_path = Path(predictions_path)
+    audit_path = Path(audit_path)
+
+    preds = pd.read_csv(predictions_path, dtype={"image_id": str})
+    audit = pd.read_csv(audit_path, dtype={"image_id": str})
+
+    # Merge width/height from audit
+    audit_cols = [c for c in ["image_id", "width", "height"] if c in audit.columns]
+    merged = preds.merge(audit[audit_cols], on="image_id", how="left")
+
+    # Filter to 1024x1024 images only
+    mask_1024 = (merged["width"] == 1024) & (merged["height"] == 1024)
+    df_1024 = merged[mask_1024].copy()
+
+    if df_1024.empty:
+        print("[WARNING] No 1024x1024 images found in the dataset.")
+        return {"confusion_matrix": None, "per_class_recall": {}, "total_1024_predictions": 0}
+
+    # Confusion matrix (rows = true, cols = predicted)
+    labels = sorted(df_1024["true_label"].unique(), key=lambda x: CLASS_NAMES.index(x) if x in CLASS_NAMES else 99)
+    cm = pd.crosstab(
+        df_1024["true_label"],
+        df_1024["predicted_label"],
+        rownames=["True"],
+        colnames=["Pred"],
+    )
+    # Reindex to canonical order for both axes
+    canonical_in_data = [c for c in CLASS_NAMES if c in set(df_1024["true_label"]) | set(df_1024["predicted_label"])]
+    cm = cm.reindex(index=canonical_in_data, columns=canonical_in_data, fill_value=0)
+
+    # Per-class recall
+    recall = {}
+    for label in canonical_in_data:
+        true_count = int((df_1024["true_label"] == label).sum())
+        correct = int(((df_1024["true_label"] == label) & (df_1024["predicted_label"] == label)).sum())
+        recall[label] = {"correct": correct, "total": true_count, "recall": correct / max(true_count, 1)}
+
+    # Non-FN images predicted as FN
+    non_fn_1024 = df_1024[df_1024["true_label"] != "FN"]
+    predicted_fn = non_fn_1024[non_fn_1024["predicted_label"] == "FN"]
+    non_fn_fn_rate = len(predicted_fn) / max(len(non_fn_1024), 1)
+
+    # Details of non-FN predicted as FN
+    fn_fp_details = predicted_fn[["image_id", "seed", "fold", "true_label", "predicted_label", "confidence"]].copy()
+
+    results = {
+        "confusion_matrix": cm,
+        "per_class_recall": recall,
+        "non_fn_predicted_fn_count": len(predicted_fn),
+        "non_fn_predicted_fn_total": len(non_fn_1024),
+        "non_fn_predicted_fn_rate": non_fn_fn_rate,
+        "non_fn_predicted_fn_details": fn_fp_details,
+        "total_1024_predictions": len(df_1024),
+        "results_df": df_1024,
+    }
+
+    # Print results
+    print("\n" + "=" * 70)
+    print("WITHIN-1024x1024 GROUP ANALYSIS")
+    print("=" * 70)
+    print(f"\nTotal 1024x1024 predictions (across all seeds): {len(df_1024)}")
+    print(f"\nConfusion Matrix (rows=True, cols=Pred):")
+    print(cm.to_string())
+    print(f"\nPer-class recall within 1024x1024:")
+    for label, stats in recall.items():
+        print(f"  {label:4s}: {stats['recall']:.4f} ({stats['correct']}/{stats['total']})")
+    print(f"\nNon-FN predicted as FN: {len(predicted_fn)} / {len(non_fn_1024)} ({non_fn_fn_rate:.4%})")
+    if not fn_fp_details.empty:
+        print(f"  Details:")
+        for _, row in fn_fp_details.iterrows():
+            print(f"    {row['image_id']} (true: {row['true_label']}, seed: {row['seed']}, fold: {row['fold']}, conf: {row['confidence']:.4f})")
+    print("=" * 70 + "\n")
+
+    # Save if output_dir provided
+    if output_dir is not None:
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        cm.to_csv(out / "within_1024_confusion_matrix.csv")
+        pd.DataFrame([
+            {"class": k, **v} for k, v in recall.items()
+        ]).to_csv(out / "within_1024_recall.csv", index=False)
+        fn_fp_details.to_csv(out / "within_1024_fn_false_positives.csv", index=False)
+
+    return results
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--predictions", type=Path, default=Path("results/member_4/predictions.csv"))
@@ -244,6 +352,14 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()
+
+    # Within-1024 analysis runs unconditionally (no checkpoints needed)
+    print("Running within-1024 group analysis...")
+    analyze_within_1024_group(
+        predictions_path=args.predictions,
+        audit_path=args.audit,
+        output_dir=args.output_dir,
+    )
 
     print(f"Running shortcut learning analysis for seed {args.seed}...")
     try:
