@@ -35,7 +35,7 @@ from models.yolov8n_cls.gradcam import (
     resolve_checkpoint_path,
 )
 from models.yolov8n_cls.prepare_data import cached_path
-from models.yolov8n_cls.train import macro_f1, predict_paths
+from models.yolov8n_cls.train import macro_f1, predict_paths, to_canonical_order
 
 
 def get_border_band_mask(size: int = 224, fraction: float = 0.15) -> np.ndarray:
@@ -89,7 +89,7 @@ def analyze_shortcuts(
     audit = pd.read_csv(audit_path, dtype={"image_id": str})
     preds_seed = preds[preds["seed"] == int(seed)].copy()
 
-    audit_cols = [c for c in ["image_id", "width", "height", "dalle_colour_bar_detected"] if c in audit.columns]
+    audit_cols = [c for c in ["image_id", "image_path", "width", "height", "dalle_colour_bar_detected"] if c in audit.columns]
     merged = preds_seed.merge(audit[audit_cols], on="image_id", how="left")
     merged["size_group"] = np.where(
         (merged["width"] == 1024) & (merged["height"] == 1024),
@@ -115,7 +115,10 @@ def analyze_shortcuts(
 
     print(f"Analyzing {len(merged)} test images for seed {seed}...")
     for row in merged.itertuples(index=False):
-        img_path = cached_path(cache_root, row.image_path)
+        rel_path = getattr(row, "image_path", None)
+        if not rel_path or pd.isna(rel_path):
+            rel_path = f"{row.true_label}/{row.image_id}.png"
+        img_path = cached_path(cache_root, str(rel_path))
         if not img_path.is_file():
             raise FileNotFoundError(f"Cached image missing: {img_path}")
 
@@ -176,8 +179,8 @@ def analyze_shortcuts(
                 logits = out[1]
             else:
                 logits = out
-            probs_ablated = logits.softmax(-1)[0].cpu().numpy()
-            probs_canonical = probs_ablated[[{v: k for k, v in model.names.items()}[name] for name in CLASS_NAMES]]
+            probs_ablated = logits.softmax(-1).detach().cpu().numpy()
+            probs_canonical = to_canonical_order(probs_ablated, model.names)[0]
             pred_ablated = CLASS_NAMES[int(probs_canonical.argmax())]
             conf_ablated = float(probs_canonical.max())
 
