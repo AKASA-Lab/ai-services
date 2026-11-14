@@ -26,6 +26,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
+from scipy.stats import fisher_exact
 import torch
 
 from lettuce_benchmark import CLASS_NAMES
@@ -239,22 +240,15 @@ def analyze_within_1024_group(
     audit_path: Path | str = Path("data/processed/audit.csv"),
     output_dir: Path | str | None = None,
 ) -> dict[str, Any]:
-    """Analyze model performance restricted to the 1024x1024 image group.
+    """Analyze model performance restricted to the 1024x1024 image group and compare with non-1024.
 
-    Computes confusion matrix, per-class recall, and the rate at which
-    non-FN images from the 1024x1024 group are predicted as FN.
+    Computes:
+    1. Per-class recall and confusion matrices for 1024x1024, non-1024, and overall groups.
+    2. False-FN predictions and rates across 1024 vs non-1024 groups.
+    3. Within-class comparison for -N: false-FN predictions and rates (predictions & unique images),
+       plus Fisher's exact test p-values.
+
     This analysis requires only predictions.csv and audit.csv (no checkpoints).
-
-    Args:
-        predictions_path: Path to held-out predictions CSV.
-        audit_path: Path to audit CSV with width/height columns.
-        output_dir: Optional directory to save results CSV.
-
-    Returns:
-        dict with keys: 'confusion_matrix', 'per_class_recall',
-        'non_fn_predicted_fn_count', 'non_fn_predicted_fn_rate',
-        'non_fn_predicted_fn_details', 'total_1024_predictions',
-        'results_df'.
     """
     predictions_path = Path(predictions_path)
     audit_path = Path(audit_path)
@@ -263,83 +257,162 @@ def analyze_within_1024_group(
     audit = pd.read_csv(audit_path, dtype={"image_id": str})
 
     # Merge width/height from audit
-    audit_cols = [c for c in ["image_id", "width", "height"] if c in audit.columns]
+    audit_cols = [c for c in ["image_id", "image_path", "width", "height"] if c in audit.columns]
     merged = preds.merge(audit[audit_cols], on="image_id", how="left")
 
-    # Filter to 1024x1024 images only
-    mask_1024 = (merged["width"] == 1024) & (merged["height"] == 1024)
-    df_1024 = merged[mask_1024].copy()
+    merged["is_1024"] = (merged["width"] == 1024) & (merged["height"] == 1024)
+    merged["original_size"] = merged["width"].astype(str) + "x" + merged["height"].astype(str)
 
-    if df_1024.empty:
-        print("[WARNING] No 1024x1024 images found in the dataset.")
-        return {"confusion_matrix": None, "per_class_recall": {}, "total_1024_predictions": 0}
+    df_1024 = merged[merged["is_1024"]].copy()
+    df_non1024 = merged[~merged["is_1024"]].copy()
 
-    # Confusion matrix (rows = true, cols = predicted)
-    labels = sorted(df_1024["true_label"].unique(), key=lambda x: CLASS_NAMES.index(x) if x in CLASS_NAMES else 99)
-    cm = pd.crosstab(
+    # Confusion matrix for 1024x1024 (rows = true, cols = predicted)
+    canonical_in_data = [c for c in CLASS_NAMES if c in set(df_1024["true_label"]) | set(df_1024["predicted_label"])]
+    cm_1024 = pd.crosstab(
         df_1024["true_label"],
         df_1024["predicted_label"],
         rownames=["True"],
         colnames=["Pred"],
-    )
-    # Reindex to canonical order for both axes
-    canonical_in_data = [c for c in CLASS_NAMES if c in set(df_1024["true_label"]) | set(df_1024["predicted_label"])]
-    cm = cm.reindex(index=canonical_in_data, columns=canonical_in_data, fill_value=0)
+    ).reindex(index=canonical_in_data, columns=canonical_in_data, fill_value=0)
 
-    # Per-class recall
-    recall = {}
+    # Per-class recall within 1024x1024
+    recall_1024 = {}
     for label in canonical_in_data:
         true_count = int((df_1024["true_label"] == label).sum())
         correct = int(((df_1024["true_label"] == label) & (df_1024["predicted_label"] == label)).sum())
-        recall[label] = {"correct": correct, "total": true_count, "recall": correct / max(true_count, 1)}
+        recall_1024[label] = {"correct": correct, "total": true_count, "recall": correct / max(true_count, 1)}
 
-    # Non-FN images predicted as FN
-    non_fn_1024 = df_1024[df_1024["true_label"] != "FN"]
-    predicted_fn = non_fn_1024[non_fn_1024["predicted_label"] == "FN"]
-    non_fn_fn_rate = len(predicted_fn) / max(len(non_fn_1024), 1)
+    # All false FN predictions (True label != FN, Predicted == FN)
+    false_fn = merged[(merged["true_label"] != "FN") & (merged["predicted_label"] == "FN")].copy()
+    false_fn_out = false_fn[[
+        "image_id", "image_path", "true_label", "predicted_label",
+        "seed", "fold", "confidence", "width", "height", "original_size", "is_1024"
+    ]].rename(columns={"is_1024": "is_1024_group"}).reset_index(drop=True)
 
-    # Details of non-FN predicted as FN
-    fn_fp_details = predicted_fn[["image_id", "seed", "fold", "true_label", "predicted_label", "confidence"]].copy()
+    # Within-class comparison for -N only
+    df_n = merged[merged["true_label"] == "-N"].copy()
+    n_1024_preds = df_n[df_n["is_1024"]]
+    tot_n_1024_preds = len(n_1024_preds)
+    false_fn_n_1024_preds = int((n_1024_preds["predicted_label"] == "FN").sum())
+    rate_n_1024_preds = false_fn_n_1024_preds / max(tot_n_1024_preds, 1)
 
-    results = {
-        "confusion_matrix": cm,
-        "per_class_recall": recall,
-        "non_fn_predicted_fn_count": len(predicted_fn),
-        "non_fn_predicted_fn_total": len(non_fn_1024),
-        "non_fn_predicted_fn_rate": non_fn_fn_rate,
-        "non_fn_predicted_fn_details": fn_fp_details,
-        "total_1024_predictions": len(df_1024),
-        "results_df": df_1024,
-    }
+    n_non1024_preds = df_n[~df_n["is_1024"]]
+    tot_n_non1024_preds = len(n_non1024_preds)
+    false_fn_n_non1024_preds = int((n_non1024_preds["predicted_label"] == "FN").sum())
+    rate_n_non1024_preds = false_fn_n_non1024_preds / max(tot_n_non1024_preds, 1)
+
+    # Fisher exact test (predictions level)
+    table_n_preds = [
+        [false_fn_n_1024_preds, tot_n_1024_preds - false_fn_n_1024_preds],
+        [false_fn_n_non1024_preds, tot_n_non1024_preds - false_fn_n_non1024_preds],
+    ]
+    odds_ratio_preds, p_val_preds = fisher_exact(table_n_preds)
+
+    # Unique images level for -N
+    n_1024_imgs = n_1024_preds.groupby("image_id")["predicted_label"].apply(lambda s: (s == "FN").any())
+    tot_n_1024_imgs = len(n_1024_imgs)
+    false_fn_n_1024_imgs = int(n_1024_imgs.sum())
+    rate_n_1024_imgs = false_fn_n_1024_imgs / max(tot_n_1024_imgs, 1)
+
+    n_non1024_imgs = n_non1024_preds.groupby("image_id")["predicted_label"].apply(lambda s: (s == "FN").any())
+    tot_n_non1024_imgs = len(n_non1024_imgs)
+    false_fn_n_non1024_imgs = int(n_non1024_imgs.sum())
+    rate_n_non1024_imgs = false_fn_n_non1024_imgs / max(tot_n_non1024_imgs, 1)
+
+    # Fisher exact test (unique images level)
+    table_n_imgs = [
+        [false_fn_n_1024_imgs, tot_n_1024_imgs - false_fn_n_1024_imgs],
+        [false_fn_n_non1024_imgs, tot_n_non1024_imgs - false_fn_n_non1024_imgs],
+    ]
+    odds_ratio_imgs, p_val_imgs = fisher_exact(table_n_imgs)
+
+    # Analysis dataframe across groups
+    analysis_records = []
+    for grp_name, grp in [("1024x1024", df_1024), ("non_1024", df_non1024), ("overall", merged)]:
+        for cls in CLASS_NAMES:
+            cls_df = grp[grp["true_label"] == cls]
+            uniq_imgs = int(cls_df["image_id"].nunique())
+            tot_p = len(cls_df)
+            corr_p = int((cls_df["predicted_label"] == cls).sum())
+            rec = round(corr_p / max(tot_p, 1), 4) if tot_p > 0 else np.nan
+            p_counts = cls_df["predicted_label"].value_counts()
+            false_fn_c = int(p_counts.get("FN", 0)) if cls != "FN" else 0
+            false_fn_r = round(false_fn_c / max(tot_p, 1), 4) if tot_p > 0 and cls != "FN" else np.nan
+
+            analysis_records.append({
+                "size_group": grp_name,
+                "true_class": cls,
+                "unique_images": uniq_imgs,
+                "total_predictions": tot_p,
+                "correct_predictions": corr_p,
+                "recall": rec,
+                "pred_FN": int(p_counts.get("FN", 0)),
+                "pred_minus_N": int(p_counts.get("-N", 0)),
+                "pred_minus_P": int(p_counts.get("-P", 0)),
+                "pred_minus_K": int(p_counts.get("-K", 0)),
+                "false_fn_rate_within_class": false_fn_r,
+            })
+    analysis_df = pd.DataFrame(analysis_records)
 
     # Print results
     print("\n" + "=" * 70)
-    print("WITHIN-1024x1024 GROUP ANALYSIS")
+    print("WITHIN-1024x1024 GROUP ANALYSIS & SHORTCUT INVESTIGATION")
     print("=" * 70)
     print(f"\nTotal 1024x1024 predictions (across all seeds): {len(df_1024)}")
-    print(f"\nConfusion Matrix (rows=True, cols=Pred):")
-    print(cm.to_string())
+    print(f"\nConfusion Matrix within 1024x1024 (rows=True, cols=Pred):")
+    print(cm_1024.to_string())
     print(f"\nPer-class recall within 1024x1024:")
-    for label, stats in recall.items():
+    for label, stats in recall_1024.items():
         print(f"  {label:4s}: {stats['recall']:.4f} ({stats['correct']}/{stats['total']})")
-    print(f"\nNon-FN predicted as FN: {len(predicted_fn)} / {len(non_fn_1024)} ({non_fn_fn_rate:.4%})")
-    if not fn_fp_details.empty:
-        print(f"  Details:")
-        for _, row in fn_fp_details.iterrows():
-            print(f"    {row['image_id']} (true: {row['true_label']}, seed: {row['seed']}, fold: {row['fold']}, conf: {row['confidence']:.4f})")
+
+    print(f"\nTotal False FN Predictions (non-FN predicted as FN): {len(false_fn_out)}")
+    print(false_fn_out[["image_id", "image_path", "true_label", "seed", "fold", "confidence", "original_size", "is_1024_group"]].to_string())
+
+    print("\n" + "-" * 70)
+    print("WITHIN-CLASS (-N ONLY) FALSE-FN COMPARISON")
+    print("-" * 70)
+    print(f"Predictions level:")
+    print(f"  1024x1024 -N : {false_fn_n_1024_preds:2d} / {tot_n_1024_preds:3d} ({rate_n_1024_preds:.4%})")
+    print(f"  Non-1024  -N : {false_fn_n_non1024_preds:2d} / {tot_n_non1024_preds:3d} ({rate_n_non1024_preds:.4%})")
+    print(f"  Fisher exact test p-value: {p_val_preds:.6f} (odds ratio: {odds_ratio_preds:.4f})")
+    print(f"Unique images level:")
+    print(f"  1024x1024 -N : {false_fn_n_1024_imgs:2d} / {tot_n_1024_imgs:3d} unique images ({rate_n_1024_imgs:.4%})")
+    print(f"  Non-1024  -N : {false_fn_n_non1024_imgs:2d} / {tot_n_non1024_imgs:3d} unique images ({rate_n_non1024_imgs:.4%})")
+    print(f"  Fisher exact test p-value: {p_val_imgs:.6f} (odds ratio: {odds_ratio_imgs:.4f})")
     print("=" * 70 + "\n")
 
-    # Save if output_dir provided
     if output_dir is not None:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
-        cm.to_csv(out / "within_1024_confusion_matrix.csv")
-        pd.DataFrame([
-            {"class": k, **v} for k, v in recall.items()
-        ]).to_csv(out / "within_1024_recall.csv", index=False)
-        fn_fp_details.to_csv(out / "within_1024_fn_false_positives.csv", index=False)
+        analysis_df.to_csv(out / "within_1024_analysis.csv", index=False)
+        false_fn_out.to_csv(out / "false_fn_predictions.csv", index=False)
 
-    return results
+    return {
+        "confusion_matrix_1024": cm_1024,
+        "recall_1024": recall_1024,
+        "false_fn_predictions": false_fn_out,
+        "analysis_df": analysis_df,
+        "within_n_predictions": {
+            "false_fn_1024": false_fn_n_1024_preds,
+            "total_1024": tot_n_1024_preds,
+            "rate_1024": rate_n_1024_preds,
+            "false_fn_non1024": false_fn_n_non1024_preds,
+            "total_non1024": tot_n_non1024_preds,
+            "rate_non1024": rate_n_non1024_preds,
+            "p_value": p_val_preds,
+            "odds_ratio": odds_ratio_preds,
+        },
+        "within_n_unique_images": {
+            "false_fn_1024": false_fn_n_1024_imgs,
+            "total_1024": tot_n_1024_imgs,
+            "rate_1024": rate_n_1024_imgs,
+            "false_fn_non1024": false_fn_n_non1024_imgs,
+            "total_non1024": tot_n_non1024_imgs,
+            "rate_non1024": rate_n_non1024_imgs,
+            "p_value": p_val_imgs,
+            "odds_ratio": odds_ratio_imgs,
+        },
+    }
 
 
 def resampling_control(
