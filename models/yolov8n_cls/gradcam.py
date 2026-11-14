@@ -258,3 +258,92 @@ def load_holdout_model_for_image(
         )
     return YOLO(str(checkpoint))
 
+
+# --------------------------------------------------------------------------- Sample Selection
+def select_gradcam_samples(
+    predictions_path: Path | str = Path("results/member_4/predictions.csv"),
+    audit_path: Path | str = Path("data/processed/audit.csv"),
+    misclassified_path: Path | str = Path("results/member_4/misclassified_images.csv"),
+    seed: int = 42,
+) -> dict[str, pd.DataFrame]:
+    """Deterministically select samples for Grad-CAM inspection.
+
+    Categories:
+      (a) correctly classified examples for each class (highest confidence + lowest confidence)
+      (b) healthy FN images
+      (c) misclassified examples prioritizing -N/-K confusions and -N -> FN
+
+    Returns:
+      dict with keys 'correct', 'healthy_fn', 'misclassified'.
+    """
+    preds = pd.read_csv(predictions_path, dtype={"image_id": str})
+    audit = pd.read_csv(audit_path, dtype={"image_id": str})
+    preds_seed = preds[preds["seed"] == int(seed)].copy()
+
+    # Merge audit metadata if available
+    audit_cols = [c for c in ["image_id", "image_path", "width", "height", "dalle_colour_bar_detected"] if c in audit.columns]
+    merged = preds_seed.merge(audit[audit_cols], on="image_id", how="left")
+
+    # (a) Correctly classified examples (highest and lowest confidence per class)
+    correct_records = []
+    correct_df = merged[merged["true_label"] == merged["predicted_label"]].copy()
+    for label in CLASS_NAMES:
+        cls_df = correct_df[correct_df["true_label"] == label].sort_values("confidence", ascending=False)
+        if len(cls_df) > 0:
+            high = cls_df.iloc[0].copy()
+            high["selection_reason"] = f"{label} highest confidence"
+            correct_records.append(high)
+        if len(cls_df) > 1:
+            low = cls_df.iloc[-1].copy()
+            low["selection_reason"] = f"{label} lower confidence"
+            correct_records.append(low)
+    df_correct = pd.DataFrame(correct_records).drop_duplicates("image_id").reset_index(drop=True)
+
+    # (b) Healthy FN images (all available in seed, deterministic order)
+    df_fn = merged[merged["true_label"] == "FN"].sort_values(["confidence", "image_id"], ascending=[False, True]).reset_index(drop=True)
+    df_fn["selection_reason"] = "healthy FN image"
+
+    # (c) Misclassified examples prioritizing -N/-K confusions and -N -> FN
+    mis = merged[merged["true_label"] != merged["predicted_label"]].copy()
+
+    def _misclass_priority(row: pd.Series) -> int:
+        true_lbl, pred_lbl = str(row["true_label"]), str(row["predicted_label"])
+        if (true_lbl == "-N" and pred_lbl == "-K") or (true_lbl == "-K" and pred_lbl == "-N"):
+            return 1  # -N/-K confusion
+        if true_lbl == "-N" and pred_lbl == "FN":
+            return 2  # -N -> FN false positive
+        return 3      # other misclassifications
+
+    if not mis.empty:
+        mis["priority"] = mis.apply(_misclass_priority, axis=1)
+        mis = mis.sort_values(["priority", "confidence"], ascending=[True, False]).reset_index(drop=True)
+        mis["selection_reason"] = mis["priority"].map({
+            1: "-N/-K confusion",
+            2: "-N -> FN confusion",
+            3: "other misclassification",
+        })
+    df_mis = mis
+
+    return {
+        "correct": df_correct,
+        "healthy_fn": df_fn,
+        "misclassified": df_mis,
+    }
+
+
+def format_sample_table(samples: dict[str, pd.DataFrame]) -> str:
+    """Format selected samples into an aligned text summary table."""
+    lines = ["Category | Image ID | True -> Pred | Conf | Dimensions | Reason",
+             "---|---|---|---|---|---"]
+    for cat, df in samples.items():
+        for _, r in df.iterrows():
+            img_id = str(r.get("image_id", ""))[:12]
+            true_pred = f"{r.get('true_label', '')} -> {r.get('predicted_label', '')}"
+            conf = f"{float(r.get('confidence', 0.0)):.3f}"
+            w, h = r.get("width", "?"), r.get("height", "?")
+            dim = f"{w}x{h}" if w != "?" else "?"
+            reason = str(r.get("selection_reason", cat))
+            lines.append(f"{cat} | {img_id} | {true_pred} | {conf} | {dim} | {reason}")
+    return "\n".join(lines)
+
+
