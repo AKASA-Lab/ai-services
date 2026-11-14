@@ -14,9 +14,11 @@ Classify head (`conv -> pool -> drop -> linear`).
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -199,3 +201,60 @@ class YOLOv8GradCAM:
             cam = np.zeros_like(cam)
 
         return cam, canonical_probs, predicted_canonical_idx
+
+
+# --------------------------------------------------------------------------- Checkpoint Resolution
+def find_image_holdout_fold(
+    image_id: str,
+    predictions_path: Path | str = Path("results/member_4/predictions.csv"),
+    seed: int = 42,
+) -> tuple[int, int]:
+    """Look up the seed and fold in which ``image_id`` was held out in the test set.
+
+    Args:
+        image_id: Image identifier string (e.g. 'fn1', '7275c536f7de381c', etc.).
+        predictions_path: Path to the held-out predictions CSV.
+        seed: Random seed partition (default 42).
+
+    Returns:
+        (seed, fold): Fold is 1-indexed (1..4).
+    """
+    df = pd.read_csv(predictions_path, dtype={"image_id": str})
+    subset = df[(df["image_id"] == str(image_id)) & (df["seed"] == int(seed))]
+    if subset.empty:
+        raise ValueError(f"Image ID '{image_id}' not found in predictions for seed {seed}")
+    fold = int(subset.iloc[0]["fold"])
+    return int(seed), fold
+
+
+def resolve_checkpoint_path(
+    seed: int,
+    fold: int,
+    checkpoints_dir: Path | str = Path("outputs/yolov8n_cls/checkpoints"),
+) -> Path:
+    """Return expected path to the FP16 checkpoint for a given seed and fold (1..4)."""
+    return Path(checkpoints_dir) / f"yolov8n_cls_seed_{seed}_fold_{fold}.pt"
+
+
+def load_holdout_model_for_image(
+    image_id: str,
+    predictions_path: Path | str = Path("results/member_4/predictions.csv"),
+    checkpoints_dir: Path | str = Path("outputs/yolov8n_cls/checkpoints"),
+    seed: int = 42,
+) -> Any:
+    """Load the fold model that never saw ``image_id`` during training or validation.
+
+    Ensures zero data leakage: each test image is explained strictly by the model trained
+    on folds other than its held-out test fold.
+    """
+    from ultralytics import YOLO
+
+    s, fold = find_image_holdout_fold(image_id, predictions_path=predictions_path, seed=seed)
+    checkpoint = resolve_checkpoint_path(s, fold, checkpoints_dir=checkpoints_dir)
+    if not checkpoint.is_file():
+        raise FileNotFoundError(
+            f"Checkpoint file missing for held-out fold: {checkpoint}. "
+            f"Seed {s}, Fold {fold} model must exist to explain image '{image_id}'."
+        )
+    return YOLO(str(checkpoint))
+
