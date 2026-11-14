@@ -14,11 +14,17 @@ Classify head (`conv -> pool -> drop -> linear`).
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from typing import Any
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import pandas as pd
+from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -345,5 +351,181 @@ def format_sample_table(samples: dict[str, pd.DataFrame]) -> str:
             reason = str(r.get("selection_reason", cat))
             lines.append(f"{cat} | {img_id} | {true_pred} | {conf} | {dim} | {reason}")
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- Visualization & CLI
+INK, MUTED = "#2b2b29", "#6b6a64"
+CONTOUR = "#00e5ff"
+HEAT_CMAP = LinearSegmentedColormap.from_list("heat", ["#fbefec", "#e8402a", "#7a1606"])
+CORNER_FRACTION = 0.2
+
+
+def plant_mask(rgb: np.ndarray, threshold: float = 40.0) -> np.ndarray:
+    """Pixels whose colour differs clearly from the image border (background) colour."""
+    border = np.concatenate([
+        rgb[:8].reshape(-1, 3),
+        rgb[-8:].reshape(-1, 3),
+        rgb[:, :8].reshape(-1, 3),
+        rgb[:, -8:].reshape(-1, 3),
+    ])
+    background = np.median(border, axis=0)
+    return np.linalg.norm(rgb.astype(float) - background, axis=2) > threshold
+
+
+def overlay(axis: plt.Axes, rgb: np.ndarray, cam: np.ndarray, title: str, title_colour: str = INK) -> None:
+    """Spotlight view: ignored regions are dimmed, strongest region outlined with cyan contour."""
+    axis.imshow(rgb * (0.18 + 0.82 * cam[..., None]))
+    axis.contour(cam, levels=[0.5], colors=[CONTOUR], linewidths=1.6)
+    axis.set_title(title, fontsize=8.5, color=title_colour, loc="left")
+    axis.axis("off")
+
+
+def render_gradcam_examples(
+    records: list[dict],
+    cams: dict[str, np.ndarray],
+    rgbs: dict[str, np.ndarray],
+    destination: Path,
+    seed: int = 42,
+) -> None:
+    """Render 4x4 grid of Grad-CAM examples across all four classes."""
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(records)
+    figure, axes = plt.subplots(4, 4, figsize=(12, 12.8))
+    for r, label in enumerate(CLASS_NAMES):
+        group = df[df["true_label"] == label]
+        correct = group[group["correct"]].sort_values("confidence", ascending=False).head(2)
+        wrong = group[~group["correct"]].sort_values("confidence", ascending=False).head(2)
+        chosen = pd.concat([correct, wrong, group[group["correct"]].sort_values("confidence").head(4)])
+        chosen = chosen.drop_duplicates("image_id").head(4)
+        for c, item in enumerate(chosen.itertuples(index=False)):
+            ok = item.correct
+            title = (
+                f"{item.image_path}\n"
+                f"true {item.true_label} → pred {item.predicted_label} ({item.confidence:.2f}) "
+                f"{'✓' if ok else '✗'}"
+            )
+            overlay(axes[r, c], rgbs[item.image_id], cams[item.image_id], title, INK if ok else "#b3261e")
+        for c in range(len(chosen), 4):
+            axes[r, c].axis("off")
+
+    figure.suptitle(
+        f"YOLOv8n-cls Grad-CAM (seed {seed}; each image explained by hold-out fold model)\n"
+        "bright = attended region, dimmed = ignored, cyan contour = >= 50% peak; ✓ = correct, ✗ = misclassified",
+        color=INK,
+        fontsize=12,
+    )
+    figure.tight_layout()
+    figure.savefig(destination, dpi=120, bbox_inches="tight")
+    plt.close(figure)
+
+
+def render_fn_shortcuts(
+    fn_records: list[dict],
+    cams: dict[str, np.ndarray],
+    rgbs: dict[str, np.ndarray],
+    destination: Path,
+    seed: int = 42,
+) -> None:
+    """Render original images alongside Grad-CAM overlays for healthy FN images."""
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    n = min(len(fn_records), 12)
+    cols = 4
+    rows = (n + cols - 1) // cols
+    figure, axes = plt.subplots(rows, cols, figsize=(12, 3.2 * rows))
+    axes = np.atleast_2d(axes)
+
+    for idx, item in enumerate(fn_records[:n]):
+        r, c = divmod(idx, cols)
+        img_id = item["image_id"]
+        title = f"{item['image_path']}\nFN ({item['confidence']:.2f}) [1024x1024]"
+        overlay(axes[r, c], rgbs[img_id], cams[img_id], title, INK)
+
+    # Turn off unused subplots
+    for idx in range(n, rows * cols):
+        r, c = divmod(idx, cols)
+        axes[r, c].axis("off")
+
+    figure.suptitle(
+        f"Healthy FN Grad-CAM spotlight (seed {seed})\n"
+        "Investigating whether attention localizes on leaf blade vs background/crop boundary",
+        color=INK,
+        fontsize=12,
+    )
+    figure.tight_layout()
+    figure.savefig(destination, dpi=120, bbox_inches="tight")
+    plt.close(figure)
+
+
+def render_misclassified_figure(
+    mis_records: list[dict],
+    cams: dict[str, np.ndarray],
+    rgbs: dict[str, np.ndarray],
+    destination: Path,
+    seed: int = 42,
+) -> None:
+    """Render misclassified samples showing original image and CAM heatmap."""
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    n = min(len(mis_records), 8)
+    if n == 0:
+        return
+    figure, axes = plt.subplots(2, n, figsize=(3.0 * n, 6.2))
+    axes = np.atleast_2d(axes)
+    for c, item in enumerate(mis_records[:n]):
+        img_id = item["image_id"]
+        axes[0, c].imshow(rgbs[img_id])
+        axes[0, c].set_title(f"{item['image_path']}\ntrue: {item['true_label']}", fontsize=8.5, color=INK, loc="left")
+        axes[0, c].axis("off")
+
+        overlay(
+            axes[1, c],
+            rgbs[img_id],
+            cams[img_id],
+            f"pred: {item['predicted_label']} ({item['confidence']:.2f})",
+            "#b3261e",
+        )
+
+    figure.suptitle(
+        f"YOLOv8n-cls misclassified samples: original (top) and Grad-CAM for predicted class (bottom)\n"
+        "Prioritizing -N/-K confusions and -N -> FN",
+        color=INK,
+        fontsize=12,
+    )
+    figure.tight_layout()
+    figure.savefig(destination, dpi=120, bbox_inches="tight")
+    plt.close(figure)
+
+
+def main() -> None:
+    """CLI matching MobileNetV2 gradcam style."""
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--runs-dir", type=Path, default=Path("outputs/yolov8n_cls"), help="Outputs directory with checkpoints")
+    parser.add_argument("--config", type=Path, default=Path("models/yolov8n_cls/config.yaml"), help="Config file path")
+    parser.add_argument("--predictions", type=Path, default=Path("results/member_4/predictions.csv"), help="Predictions CSV")
+    parser.add_argument("--audit", type=Path, default=Path("data/processed/audit.csv"), help="Audit CSV")
+    parser.add_argument("--misclassified", type=Path, default=Path("results/member_4/misclassified_images.csv"), help="Misclassified CSV")
+    parser.add_argument("--seed", type=int, default=42, help="Seed to evaluate")
+    parser.add_argument("--output-dir", type=Path, default=Path("results/member_4/gradcam"), help="Output directory")
+    parser.add_argument("--image-root", type=Path, default=Path("data/raw"), help="Raw dataset root directory")
+    args = parser.parse_args()
+
+    out = args.output_dir
+    out.mkdir(parents=True, exist_ok=True)
+
+    print(f"Selecting samples for seed {args.seed}...")
+    samples = select_gradcam_samples(
+        predictions_path=args.predictions,
+        audit_path=args.audit,
+        misclassified_path=args.misclassified,
+        seed=args.seed,
+    )
+    print(format_sample_table(samples))
+
+
+if __name__ == "__main__":
+    main()
+
 
 
