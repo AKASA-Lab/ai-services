@@ -4,7 +4,7 @@
 
 In the lettuce nutrient deficiency benchmark, all 12 healthy (FN) images have original dimensions of 1024×1024 pixels, whereas deficiency classes (-N, -P, -K) contain a mix of 1024×1024 images and non-1024 images (ranging from 1015×999 to 1024×1008). This raised a concern from code review that the YOLOv8n-cls classifier might exploit acquisition resolution or resampling artifacts as a shortcut to predict FN.
 
-To assess whether the model simply associates the 1024×1024 acquisition group with the FN label, we evaluated held-out test predictions across all 3 seeds (42, 123, 2026) stratified by original image dimensions. This analysis uses only the published `predictions.csv` and dataset `audit.csv` without requiring checkpoints.
+To assess whether the model associates the 1024×1024 acquisition group with the FN label, we evaluated held-out test predictions across all 3 seeds (42, 123, 2026) stratified by original image dimensions. This analysis uses only the published `predictions.csv` and dataset `audit.csv` without requiring checkpoints.
 
 ---
 
@@ -57,7 +57,7 @@ Across 4 folds and 3 random seeds, each image is evaluated once per seed in its 
 
 ---
 
-## 4. False FN Predictions (Non-FN Predicted as FN)
+## 4. False FN Predictions and Within-Class (-N) Comparison
 
 Across all 609 predictions in the benchmark, exactly 5 predictions predicted FN when the true label was not FN. All 5 false FN predictions are true -N samples:
 
@@ -69,19 +69,34 @@ Across all 609 predictions in the benchmark, exactly 5 predictions predicted FN 
 | `64a09d14e1ec27c1` | `-N/n_38.png` | -N | FN | 2026 | 3 | 0.6788 | 1024×1003 | No |
 | `7f69e9a092095462` | `-N/n_37.png` | -N | FN | 2026 | 3 | 0.7836 | 1023×1005 | No |
 
-### Rate of False FN by Group
+### Overall vs. Within-Class (-N) Comparison
 
-- **1024×1024 group**: 2 / 210 non-FN predictions = **0.9524%** (< 1%).
-  - Both false positives occurred on distinct physical images (`-N/n_25.png` and `-N/n_24.png`) in Seed 123 Fold 1 with low confidence (< 0.50).
-- **Non-1024 group**: 3 / 363 non-1024 predictions = **0.8264%** (< 1%).
-  - All three occurred in Seed 2026 Fold 3 (`-N/n_39.png`, `-N/n_38.png`, `-N/n_37.png`).
+The apparent overall parity between groups (2 / 210 = 0.95% vs. 3 / 363 = 0.83%) is heavily dominated by -P and -K, which never produce a single false-FN prediction (0 / 198 and 0 / 204 predictions). 
 
-The false FN rate is virtually identical between 1024×1024 (0.95%) and non-1024 images (0.83%). The model does not demonstrate a bias toward predicting FN simply because an image originates from the 1024×1024 acquisition group.
+When restricted to the only class that exhibits confusion with FN (-N):
+- **Predictions level**:
+  - 1024×1024 -N: **2 / 24 (8.33%)**
+  - Non-1024 -N: **3 / 147 (2.04%)**
+  - Fisher exact test: **p = 0.1449** (odds ratio = 4.36)
+- **Unique images level**:
+  - 1024×1024 -N: **2 / 8 unique images (25.00%)**
+  - Non-1024 -N: **3 / 49 unique images (6.12%)**
+  - Fisher exact test: **p = 0.1398** (odds ratio = 5.11)
+
+While the higher rate in the 1024 group (8.3% vs. 2.0% at prediction level; 25.0% vs. 6.1% at image level) does not reach statistical significance (p ≈ 0.14) due to small sample counts, **this failure to reject the null is not evidence of equivalence**. The elevated false-FN rate among 1024×1024 -N images leaves open the possibility that 1024-specific features increase susceptibility to false-FN predictions.
+
+### Clustering of Errors
+
+Crucially, all 5 false-FN predictions originate from exactly two isolated evaluation runs:
+1. **Cluster 1**: Seed 123, Fold 1 — 2 errors (`n_24.png` and `n_25.png`), both with low confidence (< 0.50).
+2. **Cluster 2**: Seed 2026, Fold 3 — 3 errors (`n_37.png`, `n_38.png`, `n_39.png`), with moderate-to-high confidence (0.68–0.87).
+
+Because adjacent images in each run share a single fold model and identical test-set partitioning, these 5 errors represent approximately **two independent model/fold failure events** rather than five independent data points.
 
 ---
 
 ## 5. Caveats and Limitations
 
-1. **Tiny FN sample size**: There are only 12 unique FN images in the entire dataset (averaging ~3 images per fold in 4-fold cross-validation). All statistical claims regarding FN recall rest on this small sample, limiting the statistical power of subgroup comparisons.
-2. **Dimension vs. style confounding**: While this analysis demonstrates that the network does not simply associate 1024×1024 dimensions or aspect ratio with the FN class, it cannot rule out other FN-specific shortcut cues (e.g. distinctive background illumination, camera color temperature, or tray surfaces unique to the FN photos).
+1. **Tiny FN sample size**: There are only 12 unique FN images in the entire dataset (averaging ~3 images per fold in 4-fold cross-validation). All statistical claims regarding FN recall rest on this small sample, severely constraining statistical power.
+2. **Observational confounding**: While 1024×1024 -P and -K images show zero false-FN predictions, the 4-fold elevated rate of false-FNs within -N (8.3% vs 2.0%) means we cannot rule out size-, background-, or style-correlated shortcut learning.
 3. **Pending experimental verification**: Complete confirmation of feature localization requires Grad-CAM spatial heatmaps, border-band attention mass, and the neutral-gray background ablation control (silencing background pixels while preserving leaf tissue). These analyses require the trained fold checkpoints and raw image cache, and will be executed in Phase B once checkpoints are provided.
