@@ -1,0 +1,49 @@
+{
+  "seed": 42,
+  "images": 203,
+  "method": "Grad-CAM on ResNet50 layer4 output (2048x7x7), target = predicted class, model = checkpoint of the fold where the image was held out",
+  "plant_mask": "pixels with RGB distance > 40 from median border colour",
+  "mean_plant_area_fraction": 0.687,
+  "mean_cam_mass_on_plant": 0.85,
+  "share_of_images_with_most_attention_on_plant": 0.975,
+  "bottom_right_corner_area_fraction": 0.04000000000000001,
+  "mean_cam_mass_bottom_right_corner": 0.0312,
+  "by_true_class": {
+    "-K": {
+      "cam_mass_on_plant": 0.846,
+      "plant_area_fraction": 0.625,
+      "cam_mass_bottom_right_corner": 0.0207
+    },
+    "-N": {
+      "cam_mass_on_plant": 0.819,
+      "plant_area_fraction": 0.666,
+      "cam_mass_bottom_right_corner": 0.0298
+    },
+    "-P": {
+      "cam_mass_on_plant": 0.93,
+      "plant_area_fraction": 0.781,
+      "cam_mass_bottom_right_corner": 0.0302
+    },
+    "FN": {
+      "cam_mass_on_plant": 0.589,
+      "plant_area_fraction": 0.626,
+      "cam_mass_bottom_right_corner": 0.1038
+    }
+  },
+  "by_colour_bar_group": {
+    "no_colour_bar": {
+      "images": 121,
+      "cam_mass_on_plant": 0.834,
+      "cam_mass_bottom_right_corner": 0.0301
+    },
+    "had_colour_bar": {
+      "images": 82,
+      "cam_mass_on_plant": 0.875,
+      "cam_mass_bottom_right_corner": 0.0329
+    }
+  },
+  "correct_vs_wrong_cam_mass_on_plant": {
+    "wrong": 0.891,
+    "correct": 0.845
+  }
+}
