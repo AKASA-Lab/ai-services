@@ -83,7 +83,7 @@ Each person owns one approach. All members must use the **same split manifests a
 | Member | Assigned approach | Main responsibility |
 |---|---|---|
 | **Person 1** | MobileNetV2 + integration | Dataset audit, shared split generation, baseline model, integration and final comparison |
-| **Person 2** | EfficientNet-B0 | Transfer learning, training, validation and evaluation |
+| **Person 2 (Arya Pramesh)** | EfficientNet-B0 | Transfer learning, training, validation and evaluation |
 | **Person 3** | ResNet50 | Transfer learning, training, validation and evaluation |
 | **Person 4** | YOLOv8n-cls | Classification training, validation and evaluation |
 | **Person 5** | Color/texture features + SVM | Handcrafted feature extraction, scaling, classifier training and evaluation |
@@ -101,7 +101,7 @@ Replace generic member labels with actual names and GitHub usernames.
 
 **Deliverables:** dataset audit, shared split CSVs, MobileNetV2 notebook/code, metrics, predictions and confusion matrices.
 
-### Person 2 — EfficientNet-B0
+### Person 2 (Arya Pramesh) — EfficientNet-B0
 
 - Implement pretrained EfficientNet-B0 with a four-class output layer.
 - Use the shared split manifests.

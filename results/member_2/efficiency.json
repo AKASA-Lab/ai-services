@@ -1,0 +1,12 @@
+{
+  "device": "cpu",
+  "torch_threads": 12,
+  "parameter_count": 4012672,
+  "checkpoint_megabytes": 16.35,
+  "latency_ms_batch1_mean": 42.64,
+  "latency_ms_batch1_std": 12.44,
+  "training_seconds_per_run_mean": 216.2,
+  "training_seconds_total": 2593.8,
+  "peak_gpu_memory": "not applicable (CPU run)",
+  "timing_method": "time.perf_counter, batch size 1, 224x224, 10 warm-up + 50 timed forward passes, inference_mode"
+}
