@@ -43,6 +43,7 @@ def verify_all_checkpoints(
     folds: list[int] = [1, 2, 3, 4],
     device: str = "cpu",
     imgsz: int = 224,
+    tolerance: float = 1e-4,
 ) -> pd.DataFrame:
     """Verify that every saved FP16 checkpoint reproduces the published test predictions."""
     from ultralytics import YOLO
@@ -103,7 +104,7 @@ def verify_all_checkpoints(
                 "n_test_images": len(comparison),
                 "label_match": bool(label_matches),
                 "max_confidence_diff": max_conf_diff,
-                "verified": bool(label_matches and max_conf_diff <= 1e-4),
+                "verified": bool(label_matches and max_conf_diff <= tolerance),
             })
 
     return pd.DataFrame(results)
@@ -194,6 +195,8 @@ def main() -> None:
     parser.add_argument("--splits-dir", type=Path, default=Path("data/splits"))
     parser.add_argument("--cache-root", type=Path, default=Path("outputs/yolov8n_cls/preprocessed"))
     parser.add_argument("--output-dir", type=Path, default=Path("results/member_4/checkpoint_check"))
+    parser.add_argument("--tolerance", type=float, default=1e-4,
+                        help="Maximum allowed absolute confidence difference per image (default: 1e-4)")
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()
 
@@ -207,6 +210,7 @@ def main() -> None:
             splits_dir=args.splits_dir,
             cache_root=args.cache_root,
             device=args.device,
+            tolerance=args.tolerance,
         )
         print(results_df.to_string(index=False))
         results_df.to_csv(args.output_dir / "checkpoint_verification.csv", index=False)
