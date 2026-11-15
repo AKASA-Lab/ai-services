@@ -228,11 +228,58 @@ def analyze_shortcuts(
     metrics_df = pd.DataFrame(records)
     control_df = pd.DataFrame(control_rows_original)
 
+    enrichment_df = compute_cam_enrichment(metrics_df, seed=seed)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     metrics_df.to_csv(output_dir / "shortcut_metrics.csv", index=False)
     control_df.to_csv(output_dir / "neutral_background_control.csv", index=False)
+    enrichment_df.to_csv(output_dir / "cam_enrichment.csv", index=False)
 
     return metrics_df, control_df
+
+
+def compute_cam_enrichment(
+    metrics_df: pd.DataFrame,
+    seed: int = 42,
+    checkpoint_source: str = "reproduction",
+) -> pd.DataFrame:
+    """Compute per-class leaf-mask pixel fraction and CAM enrichment ratio.
+
+    Enrichment ratio = (CAM mass on leaf mask) / (leaf-mask pixel fraction).
+    A ratio around 1.0 means attention is uniformly distributed across the image area.
+    A ratio > 1.0 indicates attention is preferentially concentrated inside the leaf mask.
+    """
+    rows = []
+    classes = [c for c in CLASS_NAMES if c in metrics_df["true_label"].unique()]
+    for label in classes:
+        sub = metrics_df[metrics_df["true_label"] == label]
+        mean_leaf_frac = float(sub["leaf_area_fraction"].mean())
+        mean_cam_leaf = float(sub["cam_mass_on_leaf"].mean())
+        enrichment = mean_cam_leaf / max(mean_leaf_frac, 1e-4)
+        rows.append({
+            "class": label,
+            "num_images": len(sub),
+            "leaf_mask_pixel_fraction": round(mean_leaf_frac, 4),
+            "cam_mass_on_leaf": round(mean_cam_leaf, 4),
+            "cam_enrichment_ratio": round(enrichment, 4),
+            "seed": seed,
+            "checkpoint_source": checkpoint_source,
+        })
+    non_fn = metrics_df[metrics_df["true_label"] != "FN"]
+    if not non_fn.empty:
+        mean_leaf_frac = float(non_fn["leaf_area_fraction"].mean())
+        mean_cam_leaf = float(non_fn["cam_mass_on_leaf"].mean())
+        enrichment = mean_cam_leaf / max(mean_leaf_frac, 1e-4)
+        rows.append({
+            "class": "Non-FN Combined",
+            "num_images": len(non_fn),
+            "leaf_mask_pixel_fraction": round(mean_leaf_frac, 4),
+            "cam_mass_on_leaf": round(mean_cam_leaf, 4),
+            "cam_enrichment_ratio": round(enrichment, 4),
+            "seed": seed,
+            "checkpoint_source": checkpoint_source,
+        })
+    return pd.DataFrame(rows)
 
 
 def analyze_within_1024_group(
