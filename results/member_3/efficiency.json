@@ -1,0 +1,12 @@
+{
+  "device": "cuda",
+  "torch_threads": 10,
+  "parameter_count": 23516228,
+  "checkpoint_megabytes": 94.39,
+  "latency_ms_batch1_mean": 5.66,
+  "latency_ms_batch1_std": 0.2,
+  "training_seconds_per_run_mean": 15.2,
+  "training_seconds_total": 182.9,
+  "peak_gpu_memory": "see run logs",
+  "timing_method": "time.perf_counter, batch size 1, 224x224, 10 warm-up + 50 timed forward passes, inference_mode"
+}

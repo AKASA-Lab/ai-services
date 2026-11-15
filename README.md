@@ -1,587 +1,443 @@
 # Lettuce NPK Deficiency Classification Benchmark
 
-A reproducible five-approach benchmark for classifying nutritional conditions in lettuce images using PyTorch and Google Colab.
+A reproducible five-approach benchmark for classifying nutritional conditions in lettuce images using computer vision and deep learning.
 
-> **Project duration:** 7 days  
-> **Team size:** 5 members  
-> **Dataset:** [Lettuce NPK Dataset – Kaggle](https://www.kaggle.com/datasets/baronn/lettuce-npk-dataset)  
-> **Primary metric:** Macro F1-score
+| Project detail | Description |
+|---|---|
+=| Dataset | [Lettuce NPK Dataset – Kaggle](https://www.kaggle.com/datasets/baronn/lettuce-npk-dataset) |
+| Task | Four-class, single-label image classification |
+| Primary metric | Macro F1-score |
+| Frameworks | PyTorch, scikit-learn, Ultralytics |
+| Evaluation | Repeated stratified 4-fold evaluation across 3 seeds |
 
----
+## 1. Project overview
 
-## 1. Project objective
+This project benchmarks five machine-learning approaches for classifying nutrient conditions in lettuce images. It investigates the performance of classical computer vision and deep-learning models on a small, imbalanced dataset.
 
-The objective is to compare five machine-learning approaches on a small, imbalanced, four-class lettuce nutrient-condition image dataset.
+The project has two distinct research tracks:
 
-The project has two distinct tracks:
+1. **Public benchmark:** Evaluate classification approaches using the Kaggle lettuce NPK dataset.
+2. **Target-domain research:** Develop and evaluate an independent nutrient-deficiency dataset using aeroponically grown fenugreek.
 
-1. **Public benchmark:** train and evaluate models using the Kaggle lettuce dataset.
-2. **Target-domain research:** develop and evaluate our own fenugreek aeroponic nutrient-deficiency dataset.
-
-The public lettuce benchmark is preliminary model-development work. Results on lettuce must **not** be presented as proof that the models can detect nutrient deficiencies in aeroponically grown fenugreek.
+The lettuce benchmark is preliminary model-development work. Results on lettuce must not be interpreted as proof that the models can detect nutrient deficiencies in aeroponically grown fenugreek.
 
 ### Research questions
 
-- How do deep-learning and classical computer-vision approaches compare on this four-class dataset?
+- How do classical computer-vision and deep-learning approaches compare on this four-class dataset?
 - How does class imbalance affect minority-class performance?
-- What is the trade-off between classification performance and inference efficiency?
+- What trade-offs exist between classification performance and inference efficiency?
 - Which visual regions influence model predictions?
 
----
+## 2. Dataset
 
-## 2. Dataset and labels
+The dataset contains four nutritional-condition classes:
 
-The dataset is commonly reported as containing 208 images across four classes:
+| Label | Meaning | Original archive count | Images used |
+|---|---|---:|---:|
+| FN | Fully nutritional / healthy | 12 | 12 |
+| -N | Nitrogen deficiency | 58 | 57 |
+| -P | Phosphorus deficiency | 66 | 66 |
+| -K | Potassium deficiency | 72 | 68 |
+| **Total** | | **208** | **203** |
 
-| Label | Meaning | Reported image count |
-|---|---|---:|
-| `FN` | Fully nutritional / healthy | 12 |
-| `-N` | Nitrogen deficiency | 58 |
-| `-P` | Phosphorus deficiency | 66 |
-| `-K` | Potassium deficiency | 72 |
-| **Total** | | **208** |
+The original archive was audited before experimentation. Five exact duplicate copies were excluded from the metadata manifest, leaving 203 unique images for the benchmark. The original files were preserved.
 
-These counts are reported in research publications using this dataset. They are **not a substitute for auditing the downloaded Kaggle archive**. The team must verify the actual number of files, labels, folder structure, duplicates, and image integrity before training.
+### Classification task
 
-### What this classification task is
+This is a four-class, single-label classification task:
 
-This is a **four-class, single-label classification task**:
+- `FN`: Fully nutritional / healthy
+- `-N`: Nitrogen deficiency
+- `-P`: Phosphorus deficiency
+- `-K`: Potassium deficiency
 
-- Healthy / fully nutritional (`FN`)
-- Nitrogen deficiency (`-N`)
-- Phosphorus deficiency (`-P`)
-- Potassium deficiency (`-K`)
+It is not an eight-combination NPK experiment or a multi-label classification task.
 
-It is not an eight-combination NPK experiment and it is not a multi-label task. The labels represent the four conditions above; do not assume the dataset contains combined nutrient-deficiency classes.
+### Dataset audit and preprocessing
 
-### Dataset handling
+The dataset audit identified an important image artifact: a DALL·E colour bar appearing in 82 of the 203 images. Its presence is correlated with class labels:
 
-- Download the dataset from Kaggle and place the original files under `data/raw/`.
-- Do not commit the dataset or large model checkpoints to GitHub.
-- Preserve the original files. Do not overwrite or silently relabel them.
-- Create a metadata manifest with at least `image_id`, `image_path`, and `label`.
-- Record missing plant IDs or acquisition metadata as unavailable; do not invent them.
+- All 12 FN images contain the colour bar.
+- 48 of the 66 -P images contain it.
+- 14% of -N images contain it.
+- 21% of -K images contain it.
 
-The shared audit, manifest, and split tools are documented in [CONTRIBUTING.md](./CONTRIBUTING.md). For example:
+This creates a potential shortcut-learning risk: a model could exploit image-generation or presentation artifacts instead of relying entirely on plant symptoms.
 
-```bash
-python -m pip install -r requirements.txt
-python -m lettuce_benchmark.cli.audit_dataset data/raw --output-dir outputs/audit
-python -m lettuce_benchmark.cli.build_manifest data/raw --output data/processed/metadata.csv
-python -m lettuce_benchmark.cli.generate_splits data/processed/metadata.csv --output-dir data/splits
-python -m lettuce_benchmark.cli.validate_splits data/splits
-```
+To reduce this risk, the shared preprocessing pipeline applies a fixed **960 × 960 safe crop** before model-specific resizing or feature extraction.
 
-These commands have now been run against the Kaggle archive: see [docs/dataset_audit.md](./docs/dataset_audit.md) for the verified counts, the duplicate policy (203 images used) and a class-correlated watermark issue that every member should read. The shared split files are in `data/splits/` (usage: [data/README.md](./data/README.md)).
+The crop removes the colour bar, but it does not establish that all other visual artifacts have been eliminated. This remains an important limitation when interpreting the results.
 
----
+The audit and duplicate policy are documented in [`docs/dataset_audit.md`](docs/dataset_audit.md).
 
-## 3. Team division
+### Dataset limitations
 
-Each person owns one approach. All members must use the **same split manifests and evaluation protocol**.
+- Only 203 unique images are available.
+- The healthy FN class contains just 12 images.
+- Plant identity and acquisition-session metadata are unavailable or insufficient for establishing plant-independent generalization.
+- The dataset may contain background, lighting, image-style, and acquisition artifacts.
+- Results should be interpreted as performance on this particular image benchmark.
 
-| Member | Assigned approach | Main responsibility |
-|---|---|---|
-| **Person 1** | MobileNetV2 + integration | Dataset audit, shared split generation, baseline model, integration and final comparison |
-| **Person 2 (Arya Pramesh)** | EfficientNet-B0 | Transfer learning, training, validation and evaluation |
-| **Person 3** | ResNet50 | Transfer learning, training, validation and evaluation |
-| **Person 4** | YOLOv8n-cls | Classification training, validation and evaluation |
-| **Person 5** | Color/texture features + SVM | Handcrafted feature extraction, scaling, classifier training and evaluation |
+## 3. Experimental protocol
 
-Replace generic member labels with actual names and GitHub usernames.
+### 3.1 Repeated stratified cross-validation
 
-### Person 1 — MobileNetV2 and integration coordinator
-
-- Audit the downloaded dataset: class counts, dimensions, corrupt files, duplicates and available metadata.
-- Create the common metadata file and split manifests for all members.
-- Implement MobileNetV2 using pretrained weights and a four-class classification head.
-- Train and evaluate using every shared split.
-- Coordinate the common prediction format and final result consolidation.
-- Generate Grad-CAM visualizations if time permits.
-
-**Deliverables:** dataset audit, shared split CSVs, MobileNetV2 notebook/code, metrics, predictions and confusion matrices.
-
-### Person 2 (Arya Pramesh) — EfficientNet-B0
-
-- Implement pretrained EfficientNet-B0 with a four-class output layer.
-- Use the shared split manifests.
-- Train, validate and evaluate across all folds and seeds.
-- Record training time, inference latency and model size.
-
-**Deliverables:** notebook/code, configuration, checkpoint, metrics, predictions and confusion matrices.
-
-### Person 3 — ResNet50
-
-- Implement pretrained ResNet50 with a four-class output layer.
-- Use the shared split manifests.
-- Train, validate and evaluate across all folds and seeds.
-- Record training time, inference latency and model size.
-
-**Deliverables:** notebook/code, configuration, checkpoint, metrics, predictions and confusion matrices.
-
-### Person 4 — YOLOv8n-cls
-
-- Prepare the dataset in the directory format expected by the Ultralytics classification interface.
-- Preserve the exact train/validation/test membership in the shared manifests.
-- Record the Ultralytics version and training arguments.
-- Export predictions in the common CSV format.
-- Measure inference latency and model size.
-
-**Deliverables:** notebook/code, configuration, weights, metrics, predictions and confusion matrices.
-
-> YOLOv8n-cls is a classification baseline. It is not a reproduction of a custom YOLO-NPK research architecture unless that architecture is separately implemented.
-
-### Person 5 — Classical computer vision + SVM
-
-Extract handcrafted features from each image.
-
-Minimum feature groups:
-
-- RGB channel mean and standard deviation.
-- HSV channel mean and standard deviation.
-- CIELAB channel mean and standard deviation.
-- GLCM texture features: contrast, homogeneity, energy and correlation.
-- LBP histogram features.
-
-Minimum classifiers:
-
-- RBF SVM with class weighting.
-- Random Forest with class weighting, if time permits.
-
-Fit scaling, feature selection and any resampling **only on the training partition**.
-
-**Deliverables:** feature extraction notebook/code, configuration, trained classifier, metrics, predictions and confusion matrices.
-
----
-
-## 4. Shared dataset split and evaluation protocol
-
-### 4.1 Primary split strategy
-
-Use **repeated stratified 4-fold cross-validation** with three fixed random seeds:
+All approaches use the same shared split manifests.
 
 ```python
 SEEDS = [42, 123, 2026]
 N_SPLITS = 4
 ```
 
-This produces 12 train/test runs per model (4 folds × 3 seeds).
+For each seed, the dataset is divided into four stratified folds. Each experiment uses three folds as development data and one fold as held-out test data. The held-out fold rotates so every image is evaluated once per seed.
 
-For each seed:
+Within each development partition, a separate validation subset is used for model selection and checkpoint selection.
 
-1. Divide the original dataset into four stratified folds.
-2. In each run, use three folds as the development partition and the remaining fold as the held-out test partition.
-3. Rotate the held-out fold so that every image is used as test data once for that seed.
-4. Repeat the process for all three seeds.
+The resulting evaluation consists of:
 
-Approximate size per run:
+- 3 random seeds.
+- 4 folds per seed.
+- 12 held-out test runs per approach.
+- One out-of-fold prediction for every image per seed.
 
-| Partition | Approximate number of images |
-|---|---:|
-| Development (three folds) | 156 |
-| Held-out test (one fold) | 52 |
-| **Total** | **208** |
+The exact partition membership is defined by the shared CSV manifests in `data/splits/`. These manifests are the source of truth; individual approaches must not regenerate their own splits.
 
-The exact counts may differ slightly because stratification assigns integer numbers of images.
+### 3.2 Validation and test isolation
 
-### 4.2 Validation split inside development data
+The validation partition is used for model selection, hyperparameter selection, and checkpoint selection.
 
-For every run, split the 156-image development partition into:
+The held-out test partition is reserved for final evaluation. It must not be used for tuning, early stopping, or repeated experimentation.
 
-- **Training:** approximately 80% of development data (~125 images).
-- **Validation:** approximately 20% of development data (~31 images).
-- **Test:** the held-out 52 images.
+For each seed, predictions from all four held-out folds are combined to produce one out-of-fold prediction set. Metrics are calculated over that complete set.
 
-The validation set is used for checkpoint selection, early stopping and model-selection decisions. The test fold must remain untouched until final evaluation.
+The reported mean and standard deviation are calculated across the three seed-level results. The three seeds reuse the same underlying dataset, so this standard deviation describes variability across split repetitions; it is not a confidence interval based on independent datasets.
 
-Use stratification for the train/validation split where possible. With only 12 reported `FN` images in the entire dataset, each validation subset may contain only a few healthy examples. Class-wise validation metrics will therefore be unstable.
+### 3.3 Common preprocessing
 
-**Do not use the test fold for hyperparameter tuning, early stopping, threshold selection or repeated experimentation.**
+All approaches apply the shared 960 × 960 watermark-safe crop before their model-specific processing.
 
-### 4.3 Approximate class distribution
+CNN approaches use architecture-appropriate input resizing and normalization. The classical approach extracts handcrafted features from the cropped images.
 
-The reported class counts imply the following approximate distribution:
+Training augmentation, where used, is restricted to training data.
 
-| Class | Total | Approx. test images per fold | Approx. development images |
+## 4. Approaches
+
+Five approaches were assigned across the team.
+
+| Member | Approach | Method |
+|---|---|---|
+| Person 1 | MobileNetV2 | ImageNet-pretrained CNN |
+| Person 2 (Arya Pramesh) | EfficientNet-B0 | ImageNet-pretrained CNN |
+| Person 3 | ResNet50 | ImageNet-pretrained CNN |
+| Person 4 | YOLOv8n-cls | Ultralytics image classification |
+| Person 5 | Classical CV + SVM | Handcrafted colour and texture features |
+
+### 4.1 MobileNetV2
+
+MobileNetV2 is used as a lightweight pretrained CNN baseline with a four-class classification head.
+
+It provides a reference point for evaluating a relatively compact deep-learning architecture.
+
+### 4.2 EfficientNet-B0
+
+EfficientNet-B0 was assigned as a transfer-learning approach. Its final benchmark results are pending and will be added after the complete evaluation and result verification.
+
+### 4.3 ResNet50
+
+ResNet50 uses ImageNet-1K pretrained weights and a reinitialized four-class classification head.
+
+The implementation uses a warm-up stage with the backbone and BatchNorm layers frozen, followed by full fine-tuning. Weighted cross-entropy is used to account for class imbalance.
+
+Checkpoint selection is based on validation macro F1, with validation loss used as a tie-breaker.
+
+### 4.4 YOLOv8n-cls
+
+The project uses the stock Ultralytics YOLOv8n classification architecture with ImageNet-pretrained weights and a four-class classification head.
+
+This is an image-classification baseline, not an object-detection model and not a reproduction of a custom YOLO-NPK research architecture.
+
+The training pipeline preserves the shared split membership and selects checkpoints using validation macro F1.
+
+The reported benchmark results are available below. Additional saved-checkpoint verification and shortcut-learning analysis are being completed separately.
+
+### 4.5 Classical computer vision and SVM
+
+The classical approach extracts a 128-dimensional handcrafted feature vector from each cropped image.
+
+The feature groups are:
+
+| Feature group | Features |
+|---|---|
+| Colour statistics | RGB, HSV and CIELAB channel means and standard deviations |
+| Colour histograms | RGB and HSV histograms with 16 bins per channel |
+| GLCM texture | Contrast, homogeneity, energy and correlation |
+| LBP texture | Uniform Local Binary Pattern histogram |
+
+Five experiments were evaluated:
+
+| Experiment | Feature set | Classifier |
+|---|---|---|
+| E1 | Colour statistics | RBF SVM |
+| E2 | Colour histograms | RBF SVM |
+| E3 | GLCM + LBP | RBF SVM |
+| E4 | All 128 features | RBF SVM |
+| E5 | All 128 features | Random Forest |
+
+Scaling is performed within the training pipeline. Hyperparameters are selected using validation macro F1, and the selected pipeline is refitted on the combined training and validation data before test evaluation.
+
+The SVM decision scores are not calibrated probabilities. Any normalized SVM scores should therefore be interpreted as relative confidence scores, not true class probabilities.
+
+## 5. Evaluation metrics
+
+Macro F1-score is the primary comparison metric because it gives equal importance to all four classes, including the underrepresented healthy class.
+
+The benchmark records:
+
+- Accuracy
+- Balanced accuracy
+- Macro precision
+- Macro recall
+- Macro F1-score
+- Weighted F1-score
+- Per-class precision, recall and F1-score
+- Confusion matrices
+
+Efficiency measurements include model size, inference latency and training time where available. Classical feature-extraction time is recorded separately from classifier prediction time.
+
+## 6. Benchmark results
+
+The following results are mean ± standard deviation across the three seed-level out-of-fold evaluations.
+
+### 6.1 Overall model comparison
+
+| Approach | Accuracy | Balanced accuracy | Macro F1 |
 |---|---:|---:|---:|
-| `FN` | 12 | 3 | 9 |
-| `-N` | 58 | 14–15 | 43–44 |
-| `-P` | 66 | 16–17 | 49–50 |
-| `-K` | 72 | 18 | 54 |
-| **Total** | **208** | **~52** | **~156** |
+| YOLOv8n-cls | 0.936 ± 0.013 | 0.948 ± 0.010 | **0.936 ± 0.016** |
+| Classical CV + SVM (E4) | 0.913 ± 0.008 | 0.923 ± 0.014 | **0.926 ± 0.010** |
+| MobileNetV2 | 0.888 ± 0.049 | 0.899 ± 0.058 | 0.879 ± 0.067 |
+| ResNet50 | 0.870 ± 0.041 | 0.866 ± 0.044 | 0.863 ± 0.045 |
+| EfficientNet-B0 | Pending | Pending | Pending |
 
-These are planning estimates. Use the actual generated split manifests as the source of truth.
+**Important:** YOLOv8n-cls currently has the highest reported macro F1. Its result should be treated as provisional until saved-checkpoint verification and the additional shortcut-learning investigation are complete.
 
-### 4.4 Group leakage and duplicate checks
+### 6.2 Classical CV experiment comparison
 
-If plant IDs or acquisition-session groups are available, images from the same plant or group must not appear in both development and test partitions. Use a group-aware stratified strategy where feasible.
+| Experiment | Accuracy | Balanced accuracy | Macro F1 |
+|---|---:|---:|---:|
+| E1 – Colour statistics + SVM | 0.8768 ± 0.0226 | 0.8994 ± 0.0180 | 0.8764 ± 0.0270 |
+| E2 – Colour histograms + SVM | 0.8834 ± 0.0186 | 0.8884 ± 0.0288 | 0.8917 ± 0.0318 |
+| E3 – GLCM + LBP + SVM | 0.7356 ± 0.0103 | 0.7396 ± 0.0170 | 0.7093 ± 0.0195 |
+| E4 – All features + RBF SVM | **0.9130 ± 0.0075** | **0.9228 ± 0.0139** | **0.9263 ± 0.0103** |
+| E5 – All features + Random Forest | 0.8834 ± 0.0103 | 0.9054 ± 0.0073 | 0.8961 ± 0.0252 |
 
-If reliable group metadata is unavailable:
+E4, combining all 128 features with an RBF SVM, was the strongest classical experiment.
 
-- Do not invent plant IDs.
-- Check for exact and near-duplicate images before splitting.
-- Keep duplicate/near-duplicate images together or remove redundant copies after documenting the decision.
-- State clearly that the evaluation is image-level and that plant-independent generalization has not been established.
+The colour-statistics and histogram experiments performed substantially better than the texture-only experiment. Combining colour and texture features improved macro F1 over the colour-histogram-only experiment.
 
-### 4.5 Split before augmentation
+These results suggest that colour information carries substantial discriminative signal in this dataset. They do not establish that any particular feature group captures biologically meaningful nutrient-deficiency symptoms.
 
-Mandatory order:
+### 6.3 Per-class performance
 
-1. Audit original images and identify duplicates.
-2. Generate train/test split manifests from original images.
-3. Create the validation subset from the development partition.
-4. Apply augmentation only to training images.
-5. Do not augment validation or test images.
+The following are the reported mean per-class F1-scores for the strongest classical experiment, E4.
 
-Never create augmented copies first and randomly split those copies afterward.
+| Class | F1-score |
+|---|---:|
+| FN | 0.9855 |
+| -N | 0.8724 |
+| -P | 0.9726 |
+| -K | 0.8748 |
 
-### 4.6 Shared split files
+The corresponding recall values are:
 
-Person 1 generates the split manifests once. All members download/use the same files. No member should independently regenerate the splits.
+| Class | Recall |
+|---|---:|
+| FN | 0.9722 |
+| -N | 0.8421 |
+| -P | 0.9848 |
+| -K | 0.8922 |
 
-Recommended structure:
+For ResNet50, the reported mean per-class F1-scores are:
+
+| Class | F1-score |
+|---|---:|
+| FN | 0.838 |
+| -N | 0.848 |
+| -P | 0.907 |
+| -K | 0.861 |
+
+YOLOv8n-cls reported out-of-fold recalls of 1.000, 0.906, 0.929 and 0.956 for FN, -N, -P and -K, respectively. Given the very small FN sample and the image-artifact concern, the perfect FN recall should be investigated rather than interpreted as conclusive evidence of reliable healthy-plant recognition.
+
+### 6.4 Error analysis
+
+Across the five classical experiments, 3,045 held-out predictions were generated: 203 images evaluated across three seeds and five experiments.
+
+The pooled errors show recurring confusion between nitrogen and potassium deficiency:
+
+| True class | Predicted class | Errors |
+|---|---|---:|
+| -N | -K | 124 |
+| -K | -N | 91 |
+| -K | -P | 65 |
+| -P | -K | 63 |
+
+These four confusion pairs account for approximately 79.6% of the pooled errors.
+
+For the strongest classical experiment, E4, the most frequent errors were also between -N and -K.
+
+This suggests that distinguishing nitrogen and potassium deficiency is a recurring challenge in the benchmark and deserves closer examination.
+
+### 6.5 Efficiency
+
+Efficiency measurements depend on the hardware and software environment used by each member. They should not be directly ranked unless the models are rebenchmarked under a common setup.
+
+Available measurements include:
+
+| Approach | Model size | Inference latency | Notes |
+|---|---:|---:|---|
+| Classical CV + SVM (E4) | 132.2 kB | 0.0407 ms/image | Classifier prediction latency; feature extraction is separate |
+| ResNet50 | 94.39 MB | 5.66 ms/image | RTX 4060; batch size 1 |
+| YOLOv8n-cls | 2.98 MB FP16 | 3.1 ms/image | Apple M3 CPU; batch size 1 |
+| MobileNetV2 | To be consolidated | To be consolidated | |
+| EfficientNet-B0 | Pending | Pending | |
+
+The classical E4 pipeline required approximately 9.245 seconds to extract features for the 203 images. The reported classifier prediction latency does not include this feature-extraction cost.
+
+The ResNet50 and YOLOv8n-cls latency figures were obtained on different hardware, so they are not a controlled comparison.
+
+## 7. Explainability and shortcut-learning investigation
+
+Model performance alone does not establish that a classifier is using meaningful plant features.
+
+The dataset's class-correlated colour-bar artifact makes visual inspection particularly important.
+
+### ResNet50
+
+Grad-CAM was implemented using the final ResNet50 convolutional stage. The analysis examined whether activation was concentrated on plant regions or potentially irrelevant background regions.
+
+The initial analysis showed that attention patterns differed between classes. In particular, the FN class had lower average plant-region attention than the other classes in the examined seed.
+
+This is a reason for further investigation, not proof that the model is relying on the colour bar. The plant-region mask is also an approximation and may include background or container regions.
+
+### YOLOv8n-cls
+
+Additional tooling has been developed for:
+
+- Grad-CAM visualization.
+- Saved-checkpoint verification.
+- Shortcut-learning analysis.
+
+The real-checkpoint analysis and controlled checks are still being completed. Until those results are available, no claim should be made that YOLOv8n-cls is free of shortcut learning.
+
+### Interpretation
+
+Explainability visualizations are diagnostic aids. They do not prove that a model has learned biologically valid nutrient-deficiency symptoms.
+
+Further analysis should examine correct and incorrect predictions, compare attention across classes, and test whether predictions change under controlled background or image-style modifications.
+
+## 8. Key findings
+
+1. **YOLOv8n-cls has the highest currently reported macro F1.** Its score is provisional pending additional saved-checkpoint and shortcut-learning checks.
+2. **The classical CV + SVM approach is competitive.** The E4 experiment achieved a macro F1 of 0.9263 using handcrafted colour and texture features.
+3. **Colour features carry substantial signal.** The colour-statistics and histogram experiments outperformed the texture-only experiment.
+4. **Nitrogen and potassium deficiency are frequently confused.** This pattern appears in the pooled classical-model errors.
+5. **High benchmark scores require careful interpretation.** The small dataset, severe class imbalance and class-correlated image artifacts limit the strength of generalization claims.
+6. **The benchmark does not establish transfer to fenugreek.** The target-domain aeroponic dataset must be collected and evaluated independently.
+
+## 9. Limitations
+
+The following limitations apply to the benchmark:
+
+- **Small dataset:** Only 203 unique images are used.
+- **Class imbalance:** The FN class contains just 12 images.
+- **Image-level evaluation:** Plant-independent generalization has not been established because reliable plant identity metadata is unavailable.
+- **Potential shortcut learning:** Image-generation and presentation artifacts are correlated with class labels.
+- **Limited acquisition diversity:** Background, lighting and image style may influence predictions.
+- **Repeated split dependence:** The three seeds reuse the same underlying images; their standard deviations are not independent-sample confidence intervals.
+- **Architecture-specific implementations:** Training details and hardware differ between approaches.
+- **Uncalibrated confidence:** SVM decision scores are not calibrated probabilities.
+- **Incomplete model comparison:** EfficientNet-B0 results remain pending.
+- **Target-domain gap:** Lettuce benchmark results do not establish performance on fenugreek or in an aeroponic environment.
+
+## 10. Future work
+
+The public benchmark is a preliminary step toward the larger aeroponic nutrient-deficiency detection project.
+
+Planned work includes:
+
+1. Complete the EfficientNet-B0 experiments and consolidate the five-model comparison.
+2. Complete YOLOv8n-cls saved-checkpoint verification and shortcut-learning analysis.
+3. Further inspect Grad-CAM outputs and misclassified examples.
+4. Collect an independent image dataset of aeroponically grown fenugreek under controlled nutrient treatments.
+5. Train and evaluate models on the target-domain dataset.
+6. Investigate transfer learning from the public lettuce dataset to fenugreek, without assuming direct generalization.
+7. Explore lightweight inference and quantization for possible edge deployment.
+
+## 11. Repository structure
 
 ```text
-data/
-├── raw/                         # Original Kaggle files; not committed
-├── processed/
-│   └── metadata.csv
-└── splits/
-    ├── seed_42/
-    │   ├── fold_1.csv
-    │   ├── fold_2.csv
-    │   ├── fold_3.csv
-    │   └── fold_4.csv
-    ├── seed_123/
-    │   ├── fold_1.csv
-    │   ├── fold_2.csv
-    │   ├── fold_3.csv
-    │   └── fold_4.csv
-    └── seed_2026/
-        ├── fold_1.csv
-        ├── fold_2.csv
-        ├── fold_3.csv
-        └── fold_4.csv
+lettuce-npk-benchmark/
+├── README.md
+├── CONTRIBUTING.md
+├── requirements.txt
+├── data/
+│   ├── raw/                    # Original Kaggle files; not committed
+│   ├── processed/
+│   │   ├── metadata.csv
+│   │   ├── audit.csv
+│   │   └── excluded_exact_duplicates.csv
+│   └── splits/
+│       ├── seed_42/
+│       ├── seed_123/
+│       └── seed_2026/
+├── docs/
+│   └── dataset_audit.md
+├── models/
+│   ├── classical_svm/
+│   └── resnet50/
+├── notebooks/
+├── results/
+│   ├── classical_ml/
+│   ├── member_1/
+│   ├── member_3/
+│   ├── member_4/
+│   └── comparison/
+└── tests/
 ```
 
-Each fold CSV should identify the partition membership explicitly. Recommended columns:
+The exact contents of individual model directories may evolve as implementations are integrated.
 
-```csv
-image_id,image_path,label,partition,seed,fold
-img001,data/raw/FN/image001.jpg,FN,test,42,1
-img002,data/raw/-N/image002.jpg,-N,train,42,1
-img003,data/raw/-P/image003.jpg,-P,validation,42,1
-```
+## 12. Reproducibility
 
-The examples above illustrate the format only. Generate actual rows from the audited archive.
+To reproduce the benchmark:
 
----
-
-## 5. Common preprocessing and training expectations
-
-### 5.1 CNN preprocessing
-
-Starting common settings for MobileNetV2, EfficientNet-B0 and ResNet50:
-
-| Setting | Starting value |
-|---|---|
-| Color space | RGB |
-| Input size | 224 × 224 |
-| Batch size | 16 |
-| Maximum epochs | 15 |
-| Optimizer | AdamW |
-| Backbone learning rate | `1e-4` |
-| Classifier learning rate | `1e-3` |
-| Weight decay | `1e-4` |
-| Number of classes | 4 |
-
-Use the normalization expected by the selected pretrained weights. Record any architecture-specific differences.
-
-Suggested training approach:
-
-- Initially freeze the pretrained backbone and train the classification head.
-- Then unfreeze and fine-tune, if appropriate.
-- Use validation data for checkpoint selection.
-- Save the best checkpoint based on a validation metric, preferably macro F1 or validation loss with macro F1 also reported.
-- Record the exact configuration and random seed.
-
-These are starting configurations, not guaranteed optimal settings. Keep the training budget reasonably comparable and document deviations.
-
-### 5.2 Augmentation
-
-Use mild training-only augmentation, such as:
-
-- Horizontal flip, if appropriate for the image orientation.
-- Small rotations.
-- Mild translation or crop.
-
-Avoid aggressive hue, saturation or color transformations because leaf color is an important visual signal for nutrient deficiency.
-
-YOLOv8n-cls and classical ML may use architecture-appropriate preprocessing, but must preserve identical split membership.
-
-### 5.3 Class imbalance
-
-The `FN` class is severely underrepresented. Consider class-weighted loss as the primary mitigation.
-
-Optional comparisons, if time permits:
-
-- Standard cross-entropy.
-- Weighted cross-entropy.
-- Focal loss.
-- Training-only oversampling.
-
-Compute class weights from the current training partition only. Any resampling must be restricted to training data. Do not apply SMOTE to raw images.
-
----
-
-## 6. Evaluation metrics
-
-### Primary metric
-
-**Macro F1-score** is the primary comparison metric because it gives equal importance to all four classes.
-
-### Required metrics for every model
-
-- Accuracy.
-- Balanced accuracy.
-- Macro precision.
-- Macro recall.
-- Macro F1-score.
-- Weighted F1-score.
-- Per-class precision, recall and F1-score.
-- Confusion matrix.
-
-### Correct result aggregation
-
-For each seed:
-
-1. Collect predictions for all four held-out test folds.
-2. Combine the out-of-fold predictions so each original image has one held-out prediction for that seed.
-3. Calculate metrics over the complete out-of-fold prediction set.
-4. Repeat for all three seeds.
-5. Report the mean and standard deviation of the three seed-level metric values.
-
-Do not treat the 12 folds as 12 independent datasets. Do not pool the three repetitions as if they were 624 unique images.
-
-### Common prediction CSV
-
-Every member must export predictions in this format:
-
-```csv
-image_id,seed,fold,true_label,predicted_label,confidence
-img001,42,1,FN,-N,0.72
-img002,42,1,-N,-N,0.91
-img003,42,1,-P,-P,0.86
-```
-
-Use exactly this class spelling and order:
+1. Obtain the original Kaggle dataset.
+2. Follow the audit and preprocessing procedure documented in `docs/dataset_audit.md`.
+3. Use the existing metadata manifest and shared split CSVs.
+4. Preserve the fixed class mapping:
 
 ```python
 CLASS_NAMES = ["FN", "-N", "-P", "-K"]
 ```
 
-The integration coordinator will recompute metrics from the saved predictions.
+5. Apply the shared watermark-safe crop before model-specific preprocessing.
+6. Use validation data for model selection and keep held-out test data untouched.
+7. Export predictions using the common schema.
+8. Recompute seed-level out-of-fold metrics from saved predictions.
 
----
+The raw dataset and large model checkpoints should not be committed to GitHub.
 
-## 7. Efficiency measurements
+## 13. Team contributions
 
-Every member must report:
-
-| Measurement | Requirement |
+| Member | Contribution |
 |---|---|
-| Accuracy | Required |
-| Macro F1 | Required |
-| Balanced accuracy | Required |
-| Per-class recall | Required |
-| Parameter count | Deep-learning models |
-| Model/checkpoint size | Required |
-| Inference latency | Required |
-| Training time | Required |
-| Peak GPU memory | If available |
+| Person 1 | Dataset audit, shared metadata and split generation, MobileNetV2 baseline, integration and result consolidation |
+| Person 2 (Arya Pramesh) | EfficientNet-B0 implementation and evaluation |
+| Person 3 | ResNet50 implementation, evaluation and Grad-CAM analysis |
+| Person 4 | YOLOv8n-cls implementation, evaluation and additional verification/shortcut-analysis tooling |
+| Person 5 | Classical computer-vision feature extraction, SVM and Random Forest experiments |
 
-Measure inference latency at batch size 1 after warm-up, using the same hardware where possible. State the device and timing method. Synchronize CUDA around GPU timing.
-
-For the classical ML approach, report feature extraction time separately from classifier prediction time.
+Replace the generic member labels with the contributors' names and GitHub usernames before publication.
 
 ---
 
-## 8. Expected results and interpretation
-
-There is **no required accuracy target** and no model is guaranteed to achieve a particular score. The goal is a fair, reproducible comparison, not to force a high result.
-
-Use these macro-F1 bands only as rough interpretation guidelines:
-
-| Macro F1 | Interpretation |
-|---|---|
-| Below 0.50 | Weak performance; inspect class-wise errors and pipeline |
-| 0.50–0.69 | Limited preliminary performance |
-| 0.70–0.79 | Useful preliminary baseline |
-| 0.80–0.89 | Strong preliminary result; verify carefully |
-| 0.90 or above | Unusually high for this small dataset; investigate leakage, duplicates and split integrity |
-
-These are not scientific benchmarks or guaranteed outcomes. Always report per-class recall and confusion matrices. A high overall score can hide poor detection of the minority `FN` class.
-
-### Required final comparison
-
-Create one comparison table with:
-
-- Model name.
-- Mean macro F1 ± standard deviation across the three seeds.
-- Mean accuracy ± standard deviation.
-- Mean balanced accuracy.
-- Per-class recall.
-- Model size.
-- Inference latency.
-- Training time.
-
-Discuss the strongest model, the weakest model, class-specific failure patterns, efficiency trade-offs and limitations.
-
----
-
-## 9. Optional extensions (only after the primary benchmark)
-
-Prioritize the five-model benchmark first. If time remains:
-
-### Explainability
-
-- Generate Grad-CAM for selected CNN models.
-- Generate LIME explanations for selected examples.
-- Inspect correct and incorrect predictions from all classes.
-- Check whether explanations focus on leaf tissue or irrelevant background regions.
-
-Explanations are diagnostic aids, not proof that a model has learned biologically valid symptoms.
-
-### Edge deployment
-
-Select one or two lightweight models and investigate quantization.
-
-Measure actual changes in:
-
-- Model size.
-- Inference latency.
-- Macro F1.
-- Per-class recall.
-
-Do not assume quantization improves performance; measure it.
-
----
-
-## 10. Seven-day execution plan
-
-| Day | Team milestone |
-|---|---|
-| **Day 1** | Download and audit dataset; check duplicates; create shared metadata and split manifests; set up Colab and repository |
-| **Day 2** | All five approaches implemented; run a small smoke test |
-| **Day 3** | First complete training/evaluation runs; fix implementation issues |
-| **Day 4** | Complete remaining folds and seeds; monitor reproducibility |
-| **Day 5** | Finish experiments and export predictions, metrics and checkpoints |
-| **Day 6** | Consolidate results; generate comparison tables, confusion matrices and error analysis |
-| **Day 7** | Final report, presentation, README cleanup and reproducibility checks |
-
-**Execution rule:** All members should begin implementing their assigned approach in parallel on Day 1 using a small sample. Do not make the other four members wait for Person 1 to finish every dataset task. However, final benchmark runs must use Person 1's approved shared split manifests.
-
----
-
-## 11. Required submission structure
-
-Each member submits:
-
-```text
-results/
-└── member_X/
-    ├── metrics.csv
-    ├── predictions.csv
-    ├── config.json
-    ├── confusion_matrix.png
-    ├── training_curves.png
-    ├── error_analysis.md
-    └── checkpoints/
-```
-
-The final repository should contain:
-
-- Dataset audit and verified class counts.
-- Shared split manifests.
-- Five model implementations.
-- Environment/dependency file and configuration files.
-- Per-model metrics and predictions.
-- Consolidated comparison table.
-- Confusion matrices and error analysis.
-- Final report documenting limitations and reproducibility steps.
-
----
-
-## 12. Suggested repository structure
-
-```text
-lettuce-npk-benchmark/
-├── README.md
-├── PROJECT_GUIDELINES.md
-├── requirements.txt
-├── .gitignore
-├── configs/
-│   ├── dataset.yaml
-│   ├── training.yaml
-│   └── evaluation.yaml
-├── data/
-│   ├── raw/                  # Not committed
-│   ├── processed/
-│   └── splits/
-├── notebooks/
-│   ├── 00_dataset_audit.ipynb
-│   ├── 01_mobilenetv2.ipynb
-│   ├── 02_efficientnet_b0.ipynb
-│   ├── 03_resnet50.ipynb
-│   ├── 04_yolov8n_cls.ipynb
-│   ├── 05_classical_ml.ipynb
-│   └── 06_comparative_analysis.ipynb
-├── src/
-│   ├── data/
-│   ├── training/
-│   ├── evaluation/
-│   └── explainability/
-├── results/
-│   ├── member_1/
-│   ├── member_2/
-│   ├── member_3/
-│   ├── member_4/
-│   ├── member_5/
-│   └── comparison/
-└── docs/
-    ├── experimental_protocol.md
-    ├── literature_review.md
-    └── final_report.md
-```
-
----
-
-## 13. Limitations and responsible claims
-
-- The dataset is small and imbalanced, especially the healthy `FN` class.
-- Published class counts must be verified against the actual downloaded archive.
-- Image-level splitting cannot establish plant-independent generalization when plant identity metadata is unavailable.
-- Results may be sensitive to image duplicates, backgrounds, lighting and acquisition conditions.
-- A model trained on lettuce may not generalize to fenugreek.
-- Hydroponic lettuce results do not validate performance in an aeroponic cultivation environment.
-- This benchmark evaluates four labelled image classes; it does not establish reliable detection of arbitrary nutrient concentrations or combined deficiencies.
-
-The final report must distinguish benchmark findings from claims about the team's fenugreek aeroponic system.
-
----
-
-## 14. Team checklist
-
-- [x] Dataset downloaded and audited.
-- [x] Actual class counts and folder structure verified.
-- [x] Corrupt, duplicate and near-duplicate images checked.
-- [x] Shared metadata manifest created.
-- [x] Shared repeated stratified 4-fold split manifests generated for all three seeds.
-- [x] Validation subsets created from development data only.
-- [ ] All five approaches implemented.
-- [ ] All models evaluated using identical test membership.
-- [ ] Predictions exported in the common format.
-- [ ] Macro F1, balanced accuracy and per-class metrics reported.
-- [ ] Confusion matrices and error analysis completed.
-- [ ] Model size, latency and training time recorded.
-- [ ] Final comparison and limitations documented.
+**Project scope statement:** This repository presents a comparative benchmark of machine-learning approaches on a public lettuce nutrient-condition dataset. It is preliminary research supporting a separate effort on nutrient-deficiency detection in aeroponically grown fenugreek. The benchmark results should not be interpreted as validation of the target-domain system.

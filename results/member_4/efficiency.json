@@ -1,0 +1,17 @@
+{
+  "device": "cpu",
+  "processor": "Apple M3",
+  "latency_threads": 2,
+  "training_threads": 7,
+  "parameter_count": 1443412,
+  "checkpoint_megabytes": 2.98,
+  "checkpoint_format": "Ultralytics .pt, EMA weights stored in FP16, optimizer stripped",
+  "fp32_state_dict_megabytes": 5.86,
+  "latency_ms_batch1_mean": 3.09,
+  "latency_ms_batch1_std": 0.23,
+  "training_seconds_per_run_mean": 16.9,
+  "training_seconds_total": 203.3,
+  "peak_gpu_memory": "not applicable (CPU run)",
+  "timing_method": "time.perf_counter, batch size 1, 224x224, 10 warm-up + 50 timed forward passes, inference_mode, FP32 PyTorch network (no Ultralytics pre/post-processing)",
+  "training_time_includes": "Ultralytics model.train(): 15 epochs incl. per-epoch validation and checkpoint saving"
+}

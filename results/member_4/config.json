@@ -1,0 +1,205 @@
+{
+  "model": "YOLOv8n-cls (Ultralytics yolov8n-cls.pt, ImageNet-1k pretrained)",
+  "config": {
+    "model": {
+      "name": "yolov8n-cls",
+      "weights": "yolov8n-cls.pt",
+      "pretrained": true,
+      "num_classes": 4
+    },
+    "data": {
+      "image_root": "data/raw",
+      "splits_dir": "data/splits",
+      "safe_crop": 960,
+      "cache_size": 256
+    },
+    "training": {
+      "epochs": 15,
+      "batch": 16,
+      "imgsz": 224,
+      "nbs": 16,
+      "optimizer": "AdamW",
+      "lr0": 0.001,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0001,
+      "warmup_epochs": 1,
+      "warmup_bias_lr": 0.0,
+      "cos_lr": false,
+      "cls_pw": 1.0,
+      "dropout": 0.0,
+      "pretrained": true,
+      "scale": 0.25,
+      "fliplr": 0.5,
+      "flipud": 0.0,
+      "hsv_h": 0.0,
+      "hsv_s": 0.0,
+      "hsv_v": 0.0,
+      "auto_augment": null,
+      "erasing": 0.0,
+      "patience": 100,
+      "amp": false,
+      "workers": 0,
+      "deterministic": true,
+      "cache": false,
+      "val": true,
+      "plots": false,
+      "save_period": 1,
+      "verbose": false
+    },
+    "selection": {
+      "metric": "val_macro_f1",
+      "tie_breaker": "val_loss"
+    },
+    "efficiency": {
+      "latency_device": "cpu",
+      "latency_threads": 2,
+      "latency_warmup": 10,
+      "latency_iterations": 50
+    }
+  },
+  "ultralytics_version": "8.4.212",
+  "ultralytics_train_args": {
+    "epochs": 15,
+    "batch": 16,
+    "imgsz": 224,
+    "nbs": 16,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "lrf": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "warmup_epochs": 1,
+    "warmup_bias_lr": 0.0,
+    "cos_lr": false,
+    "cls_pw": 1.0,
+    "dropout": 0.0,
+    "pretrained": true,
+    "scale": 0.25,
+    "fliplr": 0.5,
+    "flipud": 0.0,
+    "hsv_h": 0.0,
+    "hsv_s": 0.0,
+    "hsv_v": 0.0,
+    "auto_augment": null,
+    "erasing": 0.0,
+    "patience": 100,
+    "amp": false,
+    "workers": 0,
+    "deterministic": true,
+    "cache": false,
+    "val": true,
+    "plots": false,
+    "save_period": 1,
+    "verbose": false,
+    "device": "cpu",
+    "exist_ok": true
+  },
+  "ultralytics_train_args_per_run": "data=<outputs>/datasets/seed_<seed>_fold_<fold>, seed=<split seed>",
+  "class_weights_per_run": {
+    "seed_123_fold_1": {
+      "FN": 2.5676,
+      "-N": 0.5447,
+      "-P": 0.4493,
+      "-K": 0.4384
+    },
+    "seed_123_fold_2": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_123_fold_3": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_123_fold_4": {
+      "FN": 2.578,
+      "-N": 0.5308,
+      "-P": 0.4511,
+      "-K": 0.4401
+    },
+    "seed_2026_fold_1": {
+      "FN": 2.5676,
+      "-N": 0.5447,
+      "-P": 0.4493,
+      "-K": 0.4384
+    },
+    "seed_2026_fold_2": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_2026_fold_3": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_2026_fold_4": {
+      "FN": 2.578,
+      "-N": 0.5308,
+      "-P": 0.4511,
+      "-K": 0.4401
+    },
+    "seed_42_fold_1": {
+      "FN": 2.5676,
+      "-N": 0.5447,
+      "-P": 0.4493,
+      "-K": 0.4384
+    },
+    "seed_42_fold_2": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_42_fold_3": {
+      "FN": 2.5705,
+      "-N": 0.5292,
+      "-P": 0.4614,
+      "-K": 0.4389
+    },
+    "seed_42_fold_4": {
+      "FN": 2.578,
+      "-N": 0.5308,
+      "-P": 0.4511,
+      "-K": 0.4401
+    }
+  },
+  "hardware": {
+    "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "device": "cpu",
+    "cuda_available": false
+  },
+  "software_versions": {
+    "python": "3.13.5",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1",
+    "torch": "2.15.0",
+    "torchvision": "0.29.2",
+    "ultralytics": "8.4.212",
+    "opencv-python-headless": "5.0.0.93",
+    "scikit-image": "0.26.0",
+    "Pillow": "13.0.0",
+    "matplotlib": "3.11.2",
+    "seaborn": "0.13.2",
+    "PyYAML": "6.0.3"
+  },
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "folds": [
+    1,
+    2,
+    3,
+    4
+  ]
+}
