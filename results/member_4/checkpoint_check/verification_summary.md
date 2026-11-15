@@ -1,23 +1,23 @@
 # Checkpoint Verification & Reproduction Summary (Reproduced Checkpoints)
 
 > **Checkpoint Source:** **Reproduction** (Trained on Windows x86_64 CPU with PyTorch 2.14.1+cpu and Ultralytics 8.4.212 using unchanged `models/yolov8n_cls/config.yaml`).  
-> **Note:** The original Apple M3 checkpoints were not committed to the repository (per project guidelines prohibiting large binary checkpoints) and were therefore **not** available for direct bit-for-bit verification.
+> **Important Note:** The original Apple M3 `.pt` checkpoint files were not committed to the repository (per project guidelines prohibiting large binary artifacts) and were therefore **not available and NOT verified**. Only the training, checkpoint saving, reload, and prediction code path was verified using the newly trained reproduction checkpoints.
 
 ---
 
 ## 1. Scope of Verification
 
 ### What Was Verified
-1. **Pipeline Execution:** The full training, checkpoint saving, FP16 stripping, reload, and prediction pipeline was executed across all 12 shared benchmark runs (Seeds 42, 123, 2026 × Folds 1–4).
+1. **Pipeline Execution Code Path:** The complete training, FP16 checkpoint saving/stripping, reload via `ultralytics.YOLO`, and held-out test prediction code path was executed across all 12 shared benchmark runs (Seeds 42, 123, 2026 × Folds 1–4).
 2. **Prediction and Metric Concordance:**
-   - Across all 609 held-out test predictions (203 images × 3 seeds), **604 of 609 predictions (99.18%) have identical class labels** between the original published predictions and the reproduction.
+   - Across all 609 held-out test predictions (203 images × 3 seeds), **604 of 609 predictions (99.18%) have identical class labels** between the original published predictions and this reproduction.
    - 7 of 12 runs have 100% identical test labels.
-   - Mean absolute confidence difference across all test predictions is **0.0058** (~0.58%), and the maximum confidence difference across 11 of 12 runs is ≤ 0.062.
+   - Mean absolute confidence difference across all test predictions is **0.0058** (~0.58%), and the maximum confidence difference across 11 of 12 runs is $\le 0.062$.
    - Selected best epoch is identical in **11 of 12 runs** (Seed 2026 Fold 3 selected Epoch 9 in reproduction vs. Epoch 8 originally; validation macro F1 was identical at 0.94839).
-3. **Model Reload Integrity:** Every reproduced checkpoint reloads cleanly via `ultralytics.YOLO` and reproduces its fold evaluation without regression.
+3. **Model Reload Integrity:** Every reproduced checkpoint reloads cleanly and reproduces its evaluation.
 
 ### What Was Not Verified
-- **Original Saved Checkpoints:** Because `.pt` files are excluded by `.gitignore` and were not committed in the original PR, the original binary weights from the macOS Apple M3 training run could not be re-evaluated directly. Consequently, the strict `1e-4` bit-exact confidence tolerance failed against the original predictions (as expected across differing CPU architectures and PyTorch minor versions).
+- **Original Saved Checkpoints:** Because `.pt` files are excluded by `.gitignore` and were not committed, the original binary weights from the macOS Apple M3 training runs were **not available and could NOT be verified**. Bit-for-bit numerical reproducibility within the strict `1e-4` tolerance was therefore not verified against the original checkpoints.
 
 ---
 
@@ -43,11 +43,16 @@
 
 ## 3. Investigation of Seed 123 Fold 3 Discrepancy
 
-In the original benchmark (`results/member_4/error_analysis.md` and `runs.csv`), Seed 123 Fold 3 exhibited a discrepancy between the logged validation macro F1 during training (`0.92335`) and the recomputed value after saving the FP16 checkpoint (`0.94722`, a gap of `+0.02387`). This was originally hypothesized to stem from an FP16 weight truncation flipping a borderline prediction on a validation sample near 0.499/0.499.
+In the original benchmark (`results/member_4/error_analysis.md` and `runs.csv`), Seed 123 Fold 3 reported a discrepancy between the logged validation macro F1 during training (`0.92335`) and the recomputed value after saving the checkpoint (`0.94722`, a gap of `+0.02387`). The original report hypothesized that FP16 weight truncation flipped a borderline validation sample near 0.499/0.499.
 
-### Empirical Findings on Reproduced Checkpoint:
+### Empirical Findings on Reproduced Checkpoints:
 - **Logged Validation Macro F1:** `0.94722`
 - **Recomputed Checkpoint Validation Macro F1 (FP16):** `0.94722`
 - **Recomputed Raw State Dict (FP32):** `0.94722`
-- **Gap:** **`0.00000` (Did not reproduce)**
-- **Analysis:** In the Windows x86_64 reproduction, both FP32 and FP16 yield identical predictions on all 31 validation images, with zero borderline cases (minimum top-1 confidence margin is 0.09285 on `p27.png`, and all others exceed 0.26). Thus, the specific borderline rounding flip was platform-dependent and does not appear on x86_64 CPU.
+- **Gap:** **`0.00000` (The gap did NOT reproduce)**
+
+### Assessment:
+The `0.923` vs `0.947` gap did **not** reproduce in this run. Consequently:
+- The true root cause of the original gap remains **unconfirmed**.
+- The FP16 numerical truncation / tie-breaking hypothesis put forward in the original report remains an unverified hypothesis, not an established finding.
+- In the reproduction, all 31 validation images receive identical predictions across FP32 and FP16 evaluations, with no borderline predictions near 0.50 (minimum top-1 confidence margin is 0.09285 on `p27.png`, with all other margins exceeding 0.26).
