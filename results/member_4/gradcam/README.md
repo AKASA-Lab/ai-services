@@ -8,7 +8,7 @@
 ## 1. Visualizations Overview
 
 ### Figure 1: `gradcam_examples.png`
-A 4×4 grid displaying representative correctly classified and misclassified examples across all four nutrient deficiency classes (`FN`, `-N`, `-P`, `-K`) evaluated on Seed 42.
+A 4×4 grid displaying representative correctly classified examples across all four nutrient deficiency classes (`FN`, `-N`, `-P`, `-K`) evaluated on Seed 42 (4 images per class: 2 highest-confidence and 2 lower-confidence correct examples).
 - **Visual finding:** Attention for healthy `FN` and nitrogen-deficient `-N` samples localizes primarily on the inner leaf blade and central venation (mean leaf-mask CAM mass of **81.8%** and **82.5%** respectively in Seed 42).
 - **Diffuse attention in `-P` and `-K`:** Phosphorus and potassium deficiency examples exhibit more diffuse heatmaps with substantial activation along leaf margins, petiole bases, and outer border bands (border-band CAM mass of **43.9%** for `-P` and **34.7%** for `-K` in Seed 42), corresponding to peripheral leaf yellowing, marginal necrosis, and background contrast edges.
 
