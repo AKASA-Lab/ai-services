@@ -1,0 +1,13 @@
+checkpoint_source,seed,fold,n_test_images,label_match,max_confidence_diff,verified
+reproduction,42,1,51,True,0.0478769914512634,False
+reproduction,42,2,51,True,0.0293650031089782,False
+reproduction,42,3,51,True,0.0554519891738891,False
+reproduction,42,4,50,False,0.0189449787139892,False
+reproduction,123,1,51,True,0.039709985256195,False
+reproduction,123,2,51,True,0.0234709978103637,False
+reproduction,123,3,51,True,0.0466350018978118,False
+reproduction,123,4,50,False,0.0362809896469116,False
+reproduction,2026,1,51,False,0.0616790056228637,False
+reproduction,2026,2,51,True,0.0233439803123474,False
+reproduction,2026,3,51,False,0.1638350486755371,False
+reproduction,2026,4,50,True,0.0244699716567993,False
