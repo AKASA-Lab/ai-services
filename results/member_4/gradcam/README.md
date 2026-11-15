@@ -50,6 +50,21 @@ The quantitative attention distribution metrics across HSV-segmented leaf tissue
 - **1024×1024 images (82 images):** Mean leaf mass = **54.36%**, mean border mass = **38.34%** (heavily weighted by the 48 `-P` images in this group).
 - **Other sizes (121 images):** Mean leaf mass = **67.89%**, mean border mass = **32.53%**.
 
+### CAM Enrichment Ratio (Seed 42, Reproduced Checkpoints)
+
+The CAM enrichment ratio measures the degree to which attention concentrates on segmented leaf tissue relative to its spatial footprint:
+$$\text{CAM Enrichment Ratio} = \frac{\text{CAM mass on leaf mask}}{\text{leaf-mask pixel fraction}}$$
+
+| True Class | Number of Images | Leaf Mask Pixel Fraction | Mean Leaf CAM Mass | CAM Enrichment Ratio |
+|---|---|---|---|---|
+| **FN** | 12 | 60.61% | 81.77% | **1.3493** |
+| **-N** | 57 | 57.76% | 82.49% | **1.4280** |
+| **-P** | 66 | 47.89% | 51.68% | **1.0792** |
+| **-K** | 68 | 41.72% | 52.64% | **1.2617** |
+| **Non-FN Combined** | 191 | 48.64% | 61.21% | **1.2585** |
+
+An enrichment ratio around 1.0 indicates that model attention is distributed across the image in direct proportion to area (i.e. no selective focus on plant tissue), whereas a ratio above 1.0 signifies that attention is preferentially concentrated inside the leaf mask. Here, healthy `FN` (1.35) and nitrogen-deficient `-N` (1.43) exhibit clear concentration on leaf foliage, while phosphorus-deficient `-P` (1.08) shows attention barely exceeding area proportionality. Importantly, the standard HSV leaf mask is crude: it relies on fixed colour thresholds that inadvertently segment out chlorotic, necrotic, or purplish leaf margins into the background category, which depresses the measured leaf area and CAM mass for `-P` and `-K`. Detailed values are saved in `results/member_4/gradcam/cam_enrichment.csv`.
+
 ---
 
 ## 3. Experimental Controls
