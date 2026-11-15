@@ -1,0 +1,90 @@
+{
+  "model": "EfficientNet-B0 (timm efficientnet_b0.ra_in1k, ImageNet-1k)",
+  "config": {
+    "model": {
+      "name": "efficientnet_b0",
+      "timm_name": "efficientnet_b0",
+      "pretrained": true,
+      "pretrained_tag": "ra_in1k",
+      "num_classes": 4,
+      "drop_rate": 0.2
+    },
+    "data": {
+      "image_root": "data/raw",
+      "splits_dir": "data/splits",
+      "safe_crop": 960,
+      "cache_size": 256,
+      "input_size": 224,
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "augmentation": {
+      "random_resized_crop_scale": [
+        0.75,
+        1.0
+      ],
+      "random_resized_crop_ratio": [
+        0.9,
+        1.1
+      ],
+      "horizontal_flip": true,
+      "rotation_degrees": 10,
+      "colour_jitter": false
+    },
+    "training": {
+      "batch_size": 16,
+      "max_epochs": 15,
+      "frozen_backbone_epochs": 3,
+      "optimizer": "AdamW",
+      "backbone_lr": 0.0001,
+      "classifier_lr": 0.001,
+      "weight_decay": 0.0001,
+      "loss": "weighted_cross_entropy",
+      "selection_metric": "val_macro_f1"
+    },
+    "efficiency": {
+      "latency_warmup": 10,
+      "latency_iterations": 50
+    }
+  },
+  "hardware": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "device": "cpu",
+    "cuda_available": false
+  },
+  "software_versions": {
+    "python": "3.13.15",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "torch": "2.15.0+cpu",
+    "torchvision": "0.29.2+cpu",
+    "ultralytics": "not-installed",
+    "opencv-python-headless": "5.0.0.93",
+    "scikit-image": "0.26.0",
+    "Pillow": "12.3.0",
+    "matplotlib": "3.11.2",
+    "seaborn": "0.13.2",
+    "PyYAML": "6.0.3"
+  },
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "folds": [
+    1,
+    2,
+    3,
+    4
+  ]
+}

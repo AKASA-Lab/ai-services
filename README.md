@@ -127,7 +127,7 @@ Five approaches were assigned across the team.
 | Member | Approach | Method |
 |---|---|---|
 | Person 1 | MobileNetV2 | ImageNet-pretrained CNN |
-| Person 2 | EfficientNet-B0 | ImageNet-pretrained CNN |
+| Person 2 (Arya Pramesh) | EfficientNet-B0 | ImageNet-pretrained CNN |
 | Person 3 | ResNet50 | ImageNet-pretrained CNN |
 | Person 4 | YOLOv8n-cls | Ultralytics image classification |
 | Person 5 | Classical CV + SVM | Handcrafted colour and texture features |
@@ -431,7 +431,7 @@ The raw dataset and large model checkpoints should not be committed to GitHub.
 | Member | Contribution |
 |---|---|
 | Person 1 | Dataset audit, shared metadata and split generation, MobileNetV2 baseline, integration and result consolidation |
-| Person 2 | EfficientNet-B0 implementation and evaluation |
+| Person 2 (Arya Pramesh) | EfficientNet-B0 implementation and evaluation |
 | Person 3 | ResNet50 implementation, evaluation and Grad-CAM analysis |
 | Person 4 | YOLOv8n-cls implementation, evaluation and additional verification/shortcut-analysis tooling |
 | Person 5 | Classical computer-vision feature extraction, SVM and Random Forest experiments |
