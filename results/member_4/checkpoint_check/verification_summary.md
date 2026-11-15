@@ -11,10 +11,10 @@
 1. **Pipeline Execution Code Path:** The complete training, FP16 checkpoint saving/stripping, reload via `ultralytics.YOLO`, and held-out test prediction code path was executed across all 12 shared benchmark runs (Seeds 42, 123, 2026 × Folds 1–4).
 2. **Prediction and Metric Concordance:**
    - Across all 609 held-out test predictions (203 images × 3 seeds), **604 of 609 predictions (99.18%) have identical class labels** between the original published predictions and this reproduction.
-   - 7 of 12 runs have 100% identical test labels.
+   - **8 of 12 runs** have 100% identical test labels (Seeds 42 Folds 1–3, Seeds 123 Folds 1–3, Seed 2026 Folds 2 and 4).
    - Mean absolute confidence difference across all test predictions is **0.0058** (~0.58%), and the maximum confidence difference across 11 of 12 runs is $\le 0.062$.
    - Selected best epoch is identical in **11 of 12 runs** (Seed 2026 Fold 3 selected Epoch 9 in reproduction vs. Epoch 8 originally; validation macro F1 was identical at 0.94839).
-3. **Model Reload Integrity:** Every reproduced checkpoint reloads cleanly and reproduces its evaluation.
+3. **Model Reload Integrity:** Each of the 12 reproduced FP16 checkpoints reloads successfully via `ultralytics.YOLO` to run downstream inference, generating evaluation predictions and Grad-CAM explanations.
 
 ### What Was Not Verified
 - **Original Saved Checkpoints:** Because `.pt` files are excluded by `.gitignore` and were not committed, the original binary weights from the macOS Apple M3 training runs were **not available and could NOT be verified**. Bit-for-bit numerical reproducibility within the strict `1e-4` tolerance was therefore not verified against the original checkpoints.
