@@ -9,12 +9,12 @@
 
 ### Figure 1: `gradcam_examples.png`
 A 4×4 grid displaying representative correctly classified examples across all four nutrient deficiency classes (`FN`, `-N`, `-P`, `-K`) evaluated on Seed 42 (4 images per class: 2 highest-confidence and 2 lower-confidence correct examples).
-- **Visual finding:** Attention for healthy `FN` and nitrogen-deficient `-N` samples localizes primarily on the inner leaf blade and central venation (mean leaf-mask CAM mass of **81.8%** and **82.5%** respectively in Seed 42).
-- **Diffuse attention in `-P` and `-K`:** Phosphorus and potassium deficiency examples exhibit more diffuse heatmaps with substantial activation along leaf margins, petiole bases, and outer border bands (border-band CAM mass of **43.9%** for `-P` and **34.7%** for `-K` in Seed 42), corresponding to peripheral leaf yellowing, marginal necrosis, and background contrast edges.
+- **Visual finding:** Attention in these examples appears primarily centered over the main leaf blade (mean leaf-mask CAM mass of **81.8%** for `FN` and **82.5%** for `-N` in Seed 42). Note that the 7×7 CAM feature map is too coarse to resolve vein-level detail or fine anatomical structures.
+- **Diffuse attention in `-P` and `-K`:** Phosphorus and potassium deficiency examples exhibit broader, more diffuse heatmaps with greater activation extending toward outer margins and border bands (border-band CAM mass of **43.9%** for `-P` and **34.7%** for `-K` in Seed 42). While these activations coincide visually with marginal yellowing, peripheral necrosis, or background contrast edges, the coarse grid precludes attributing activations to fine margin features.
 
 ### Figure 2: `gradcam_fn_shortcuts.png`
 A spotlight view of all 12 healthy `FN` images in the benchmark (Seed 42 holdout fold models).
-- **Visual finding:** High-activation regions (cyan contour $\ge 50\%$ of peak activation) localize over green leaf lamina.
+- **Visual finding:** In these 12 examples, high-activation regions (cyan contour $\ge 50\%$ of peak activation) appear centered over the green leaf lamina rather than empty background.
 - **Corner watermark check:** Following the mandatory 960×960 watermark-safe crop (`docs/dataset_audit.md` §4), none of the 12 `FN` heatmaps exhibit attention parked in the bottom-right corner where DALL·E colour bars originally resided.
 
 ### Figure 3: `gradcam_misclassified.png`
@@ -25,12 +25,12 @@ Detailed inspection of 8 misclassified samples from the reproduced checkpoints:
    - `-N/n_37.png` (Seed 2026 Fold 3: true `-N` $\rightarrow$ pred `FN`, conf 0.72)
    - `-N/n_38.png` (Seed 2026 Fold 3: true `-N` $\rightarrow$ pred `FN`, conf 0.56)
    - `-N/n_39.png` (Seed 2026 Fold 3: true `-N` $\rightarrow$ pred `FN`, conf 0.86)
-   - *Observation:* These false-FN predictions display broad, diffuse attention across the foliage and background borders, failing to focus on localized chlorotic symptoms that distinguish `-N` from `FN`.
+   - *Observation:* In these five examples, the attention map appears broadly dispersed across the central foliage and background borders rather than concentrating on specific pale regions, though the 7×7 spatial grid limits fine diagnostic localization.
 2. **Deficiency Confusion Errors (`-N` vs `-K`):**
    - `-N/n_14.png` (Seed 42 Fold 1: true `-N` $\rightarrow$ pred `-K`, conf 0.80)
    - `-N/n_27.png` (Seed 42 Fold 1: true `-N` $\rightarrow$ pred `-K`, conf 0.92)
    - `-K/k_35.png` (Seed 42 Fold 3: true `-K` $\rightarrow$ pred `-N`, conf 0.44)
-   - *Observation:* Confusions occur where generalized chlorosis visually overlaps with potassium leaf-edge scorching, with attention concentrated along outer leaf perimeters.
+   - *Observation:* In these examples, heatmaps extend broadly across outer leaf boundaries and perimeter margins where potassium scorch and generalized paleing visually overlap.
 
 ---
 
