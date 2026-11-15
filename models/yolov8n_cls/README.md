@@ -88,3 +88,20 @@ committed (per project rules). Ultralytics usage analytics are switched off insi
   weights.
 - **Checkpoint format.** Ultralytics stores the weights in FP16, so the file is about half the size
   of an FP32 state dict. Both sizes are reported in `efficiency.json`.
+
+## Explainability (Grad-CAM & Shortcut Analysis)
+
+Grad-CAM heatmaps hook the final C2f bottleneck block (`model.model[-2]`, 7×7 feature map) and extract pre-softmax logits from the classification head. Every held-out test image is evaluated strictly with its corresponding fold checkpoint (zero test leakage).
+
+To run sample selection, Grad-CAM generation, and shortcut-learning controls:
+
+```bash
+# Quantitative shortcut metrics, neutral-background ablation, and resampling control
+python -m models.yolov8n_cls.shortcut_analysis --seed 42 --checkpoints-dir outputs/yolov8n_cls/checkpoints --output-dir results/member_4/gradcam
+
+# Checkpoint verification & boundary analysis
+python -m models.yolov8n_cls.verify_checkpoint --tolerance 1e-4
+```
+
+Generated visual artifacts and analysis metrics are documented in [`results/member_4/gradcam/`](../../results/member_4/gradcam/).
+
