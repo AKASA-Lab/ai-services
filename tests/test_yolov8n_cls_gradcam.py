@@ -203,3 +203,45 @@ def test_plant_mask_and_overlay() -> None:
     fig, ax = plt.subplots()
     overlay(ax, rgb.astype(float) / 255.0, cam, "test title")
     plt.close(fig)
+
+
+def test_gradcam_examples_only_contain_correct_samples(tmp_path: Path) -> None:
+    """Test that every sample selected for the examples figure has true == predicted."""
+    preds_rows = []
+    audit_rows = []
+    for label in CLASS_NAMES:
+        for i in range(5):
+            img_id = f"test_{label}_{i}"
+            # i == 0: misclassified, i > 0: correct
+            pred = "-K" if (i == 0 and label != "-K") else ("-N" if i == 0 else label)
+            preds_rows.append({
+                "image_id": img_id,
+                "seed": 42,
+                "fold": 1,
+                "true_label": label,
+                "predicted_label": pred,
+                "confidence": 0.99 - 0.1 * i,
+            })
+            audit_rows.append({
+                "image_id": img_id,
+                "image_path": f"{label}/{img_id}.png",
+                "label": label,
+                "width": 1024,
+                "height": 1024,
+            })
+    preds_file = tmp_path / "preds.csv"
+    audit_file = tmp_path / "audit.csv"
+    pd.DataFrame(preds_rows).to_csv(preds_file, index=False)
+    pd.DataFrame(audit_rows).to_csv(audit_file, index=False)
+
+    samples = select_gradcam_samples(preds_file, audit_file, preds_file, seed=42)
+    correct_samples = samples["correct"]
+    assert len(correct_samples) > 0
+    assert (correct_samples["true_label"] == correct_samples["predicted_label"]).all()
+
+    # Also verify on real predictions if present
+    real_preds = Path("results/member_4/predictions.csv")
+    real_audit = Path("data/processed/audit.csv")
+    if real_preds.is_file() and real_audit.is_file():
+        real_samples = select_gradcam_samples(real_preds, real_audit, real_preds, seed=42)
+        assert (real_samples["correct"]["true_label"] == real_samples["correct"]["predicted_label"]).all()

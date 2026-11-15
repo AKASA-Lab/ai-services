@@ -271,11 +271,12 @@ def select_gradcam_samples(
     audit_path: Path | str = Path("data/processed/audit.csv"),
     misclassified_path: Path | str = Path("results/member_4/misclassified_images.csv"),
     seed: int = 42,
+    samples_per_class: int = 4,
 ) -> dict[str, pd.DataFrame]:
     """Deterministically select samples for Grad-CAM inspection.
 
     Categories:
-      (a) correctly classified examples for each class (highest confidence + lowest confidence)
+      (a) correctly classified examples for each class (highest confidence + lower confidence; only correct)
       (b) healthy FN images
       (c) misclassified examples prioritizing -N/-K confusions and -N -> FN
 
@@ -290,19 +291,25 @@ def select_gradcam_samples(
     audit_cols = [c for c in ["image_id", "image_path", "width", "height", "dalle_colour_bar_detected"] if c in audit.columns]
     merged = preds_seed.merge(audit[audit_cols], on="image_id", how="left")
 
-    # (a) Correctly classified examples (highest and lowest confidence per class)
+    # (a) Correctly classified examples (only correctly classified images)
     correct_records = []
     correct_df = merged[merged["true_label"] == merged["predicted_label"]].copy()
     for label in CLASS_NAMES:
         cls_df = correct_df[correct_df["true_label"] == label].sort_values("confidence", ascending=False)
-        if len(cls_df) > 0:
-            high = cls_df.iloc[0].copy()
-            high["selection_reason"] = f"{label} highest confidence"
-            correct_records.append(high)
-        if len(cls_df) > 1:
-            low = cls_df.iloc[-1].copy()
-            low["selection_reason"] = f"{label} lower confidence"
-            correct_records.append(low)
+        if len(cls_df) <= samples_per_class:
+            chosen = cls_df.copy()
+        else:
+            n_high = samples_per_class // 2
+            n_low = samples_per_class - n_high
+            high = cls_df.head(n_high).copy()
+            low = cls_df.tail(n_low).copy()
+            chosen = pd.concat([high, low]).drop_duplicates("image_id")
+        for idx, item in enumerate(chosen.to_dict(orient="records")):
+            if idx < (samples_per_class // 2):
+                item["selection_reason"] = f"{label} highest confidence"
+            else:
+                item["selection_reason"] = f"{label} lower confidence"
+            correct_records.append(item)
     df_correct = pd.DataFrame(correct_records).drop_duplicates("image_id").reset_index(drop=True)
 
     # (b) Healthy FN images (all available in seed, deterministic order)
@@ -387,31 +394,33 @@ def render_gradcam_examples(
     destination: Path,
     seed: int = 42,
 ) -> None:
-    """Render 4x4 grid of Grad-CAM examples across all four classes."""
+    """Render 4x4 grid of Grad-CAM examples across all four classes (only correctly classified)."""
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(records)
+    if "correct" in df.columns:
+        df = df[df["correct"]].copy()
+    else:
+        df = df[df["true_label"] == df["predicted_label"]].copy()
     figure, axes = plt.subplots(4, 4, figsize=(12, 12.8))
     for r, label in enumerate(CLASS_NAMES):
         group = df[df["true_label"] == label]
-        correct = group[group["correct"]].sort_values("confidence", ascending=False).head(2)
-        wrong = group[~group["correct"]].sort_values("confidence", ascending=False).head(2)
-        chosen = pd.concat([correct, wrong, group[group["correct"]].sort_values("confidence").head(4)])
-        chosen = chosen.drop_duplicates("image_id").head(4)
+        correct = group.sort_values("confidence", ascending=False)
+        high = correct.head(2)
+        low = correct.tail(2)
+        chosen = pd.concat([high, low]).drop_duplicates("image_id").head(4)
         for c, item in enumerate(chosen.itertuples(index=False)):
-            ok = item.correct
             title = (
                 f"{item.image_path}\n"
-                f"true {item.true_label} → pred {item.predicted_label} ({item.confidence:.2f}) "
-                f"{'✓' if ok else '✗'}"
+                f"true {item.true_label} → pred {item.predicted_label} ({item.confidence:.2f}) ✓"
             )
-            overlay(axes[r, c], rgbs[item.image_id], cams[item.image_id], title, INK if ok else "#b3261e")
+            overlay(axes[r, c], rgbs[item.image_id], cams[item.image_id], title, INK)
         for c in range(len(chosen), 4):
             axes[r, c].axis("off")
 
     figure.suptitle(
-        f"YOLOv8n-cls Grad-CAM (seed {seed}; each image explained by hold-out fold model)\n"
-        "bright = attended region, dimmed = ignored, cyan contour = >= 50% peak; ✓ = correct, ✗ = misclassified",
+        f"YOLOv8n-cls Grad-CAM (seed {seed}; reproduced checkpoints; each image explained by hold-out fold model)\n"
+        "bright = attended region, dimmed = ignored, cyan contour = >= 50% peak; all examples correctly classified (✓)",
         color=INK,
         fontsize=12,
     )
