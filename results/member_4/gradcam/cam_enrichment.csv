@@ -1,0 +1,6 @@
+class,num_images,leaf_mask_pixel_fraction,cam_mass_on_leaf,cam_enrichment_ratio,seed,checkpoint_source
+FN,12,0.6061,0.8177,1.3493,42,reproduction
+-N,57,0.5776,0.8249,1.428,42,reproduction
+-P,66,0.4789,0.5168,1.0792,42,reproduction
+-K,68,0.4172,0.5264,1.2617,42,reproduction
+Non-FN Combined,191,0.4864,0.6121,1.2585,42,reproduction
