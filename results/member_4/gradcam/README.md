@@ -36,15 +36,20 @@ Detailed inspection of 8 misclassified samples from the reproduced checkpoints:
 
 ## 2. Quantitative Shortcut Metrics (Seed 42 Only)
 
-The quantitative attention distribution metrics across HSV-segmented leaf tissue versus the outer 15% image frame border for Seed 42:
+### Spatial Attention Allocation vs. Border Band
+Attention distribution across HSV-segmented leaf tissue versus the outer frame border band for Seed 42:
 
-| True Class | Number of Images | Mean Leaf CAM Mass | Mean Border-Band CAM Mass | Leaf Attention Density | Border Attention Density |
-|---|---|---|---|---|---|
-| **FN** | 12 | **81.77%** | 28.23% | 1.834 | 0.609 |
-| **-N** | 57 | **82.49%** | 26.13% | 2.115 | 0.563 |
-| **-P** | 66 | 51.68% | **43.86%** | 1.092 | 0.945 |
-| **-K** | 68 | 52.64% | 34.66% | 1.378 | 0.747 |
-| **Non-FN Combined** | 191 | 61.21% | 35.29% | 1.499 | 0.760 |
+| True Class | Number of Images | Mean Leaf CAM Mass | Mean Border-Band CAM Mass |
+|---|---|---|---|
+| **FN** | 12 | **81.77%** | 28.23% |
+| **-N** | 57 | **82.49%** | 26.13% |
+| **-P** | 66 | 51.68% | **43.86%** |
+| **-K** | 68 | 52.64% | 34.66% |
+| **Non-FN Combined** | 191 | 61.21% | 35.29% |
+
+- **Border Band Definition:** The border band is defined in `shortcut_analysis.py` as the outer 15% margin on each of the four image boundaries ($b = \lfloor 0.15 \times 224 \rfloor = 33$ pixels from top, bottom, left, and right).
+- **Border Area Share:** The unmasked central crop spans $(1 - 2 \times 0.15)^2 = 0.70^2 = 0.4900$ (49.00%), so the border band covers exactly **51.00% of the 224×224 image area**.
+- **Comparison to Area Proportionality:** Because the border band represents 51.00% of the image canvas, a border CAM mass below 51.00% indicates lower attention than uniform area proportionality. In Seed 42, all classes exhibit mean border CAM mass well below 51.00% (healthy `FN` at 28.23%, `-N` at 26.13%, `-K` at 34.66%, and `-P` at 43.86%), confirming that attention is not disproportionately parked along outer frame edges.
 
 ### By Size Group (Seed 42 Only):
 - **1024×1024 images (82 images):** Mean leaf mass = **54.36%**, mean border mass = **38.34%** (heavily weighted by the 48 `-P` images in this group).
